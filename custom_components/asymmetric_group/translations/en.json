@@ -1,0 +1,233 @@
+{
+  "config": {
+    "error": {
+      "group_member_cycle": "The group would contain itself, directly or through a member group. Remove the member that loops back to this group."
+    },
+    "step": {
+      "attributes": {
+        "data": {
+          "attribute_members": "Attribute members"
+        },
+        "description": "Asymmetric attributes is on: attribute changes (brightness, colour, effect) apply to these members only. An attribute change switches a member on only if it is also in the Power-ON set.",
+        "title": "Attribute member set"
+      },
+      "power": {
+        "data": {
+          "power_off_members": "Power-OFF members",
+          "power_on_members": "Power-ON members"
+        },
+        "description": "Asymmetric power is on: choose which members turn on and which turn off. Turn-off usually keeps the full base set so a group off sweeps everything.",
+        "title": "Power member sets"
+      },
+      "sets": {
+        "data": {
+          "all_entities": "All entities (group is on only if all state members are on)",
+          "asymmetric_attributes": "Asymmetric attributes",
+          "asymmetric_power": "Asymmetric power",
+          "asymmetric_state": "Asymmetric state",
+          "enforce_power_scope": "Enforce power scope",
+          "hide_members": "Hide members"
+        },
+        "description": "The toggles set the starting (default) state of the group's switches. Each enabled behaviour gets its own member-set step next; disabled behaviours use the full base set and show no extra fields.",
+        "title": "Defaults and options"
+      },
+      "state": {
+        "data": {
+          "state_members": "State members"
+        },
+        "description": "Asymmetric state is on: the group's on/off state is computed from these members only.",
+        "title": "State member set"
+      },
+      "user": {
+        "data": {
+          "base_members": "Base members",
+          "name": "Name"
+        },
+        "description": "Base members are ALL lights involved in this group in any way. Subsets for each behaviour are chosen in the next step.",
+        "title": "Create an Asymmetric Group"
+      }
+    }
+  },
+  "entity": {
+    "switch": {
+      "asymmetric_attributes": {
+        "name": "Asymmetric attributes"
+      },
+      "asymmetric_power": {
+        "name": "Asymmetric power"
+      },
+      "asymmetric_state": {
+        "name": "Asymmetric state"
+      },
+      "enforce_power_scope": {
+        "name": "Enforce power scope"
+      }
+    }
+  },
+  "options": {
+    "error": {
+      "preset_name_required": "A name is required for a new preset.",
+      "group_member_cycle": "The group would contain itself, directly or through a member group. Remove the member that loops back to this group."
+    },
+    "step": {
+      "init": {
+        "menu_options": {
+          "members": "Member sets and defaults",
+          "presets": "Preset library editor"
+        },
+        "title": "Asymmetric Group options"
+      },
+      "members": {
+        "data": {
+          "all_entities": "All entities (group is on only if all state members are on)",
+          "asymmetric_attributes": "Asymmetric attributes",
+          "asymmetric_power": "Asymmetric power",
+          "asymmetric_state": "Asymmetric state",
+          "enforce_power_scope": "Enforce power scope",
+          "hide_members": "Hide members"
+        },
+        "description": "Saving applies these settings to the group right away, replacing any changes made by presets or automations since. Each enabled behaviour gets its own member-set step next.",
+        "title": "Defaults and options"
+      },
+      "members_attributes": {
+        "data": {
+          "attribute_members": "Attribute members"
+        },
+        "description": "Asymmetric attributes is on: attribute changes (brightness, colour, effect) apply to these members only. An attribute change switches a member on only if it is also in the Power-ON set.",
+        "title": "Attribute member set"
+      },
+      "members_power": {
+        "data": {
+          "power_off_members": "Power-OFF members",
+          "power_on_members": "Power-ON members"
+        },
+        "description": "Asymmetric power is on: choose which members turn on and which turn off. Turn-off usually keeps the full base set so a group off sweeps everything.",
+        "title": "Power member sets"
+      },
+      "members_state": {
+        "data": {
+          "state_members": "State members"
+        },
+        "description": "Asymmetric state is on: the group's on/off state is computed from these members only.",
+        "title": "State member set"
+      },
+      "presets_edit": {
+        "data": {
+          "asymmetric_attributes": "Asymmetric attributes",
+          "asymmetric_power": "Asymmetric power",
+          "asymmetric_state": "Asymmetric state",
+          "enforce_power_scope": "Enforce power scope",
+          "attribute_members": "Attribute members",
+          "attribute_members_include": "Include attribute members",
+          "delete_preset": "Delete this preset",
+          "power_off_members": "Power-OFF members",
+          "power_off_members_include": "Include power-OFF members",
+          "power_on_members": "Power-ON members",
+          "power_on_members_include": "Include power-ON members",
+          "preset_name": "Preset name",
+          "state_members": "State members",
+          "state_members_include": "Include state members"
+        },
+        "description": "A preset only stores the settings you include. Toggles left on 'unchanged' and member sets left unticked are not stored, and do not change a group when the preset is applied.",
+        "title": "Edit preset"
+      },
+      "presets_pick": {
+        "data": {
+          "preset": "Preset"
+        },
+        "description": "Choose a preset to edit, or create a new one. Presets are shared by all Asymmetric Groups.",
+        "title": "Edit presets"
+      }
+    }
+  },
+  "services": {
+    "apply_preset": {
+      "description": "Apply a preset from the global library to an Asymmetric Group. Only the keys stored in the preset are changed.",
+      "fields": {
+        "entity_id": {
+          "description": "The Asymmetric Group light entity.",
+          "name": "Group"
+        },
+        "preset": {
+          "description": "Name of the preset to apply.",
+          "name": "Preset"
+        }
+      },
+      "name": "Apply preset"
+    },
+    "delete_preset": {
+      "description": "Delete a preset from the global library. Groups that applied it are not affected.",
+      "fields": {
+        "preset": {
+          "description": "Name of the preset to delete.",
+          "name": "Preset"
+        }
+      },
+      "name": "Delete preset"
+    },
+    "save_preset": {
+      "description": "Save a full snapshot of a group's current runtime state as a preset in the global library.",
+      "fields": {
+        "entity_id": {
+          "description": "The Asymmetric Group light entity to snapshot.",
+          "name": "Group"
+        },
+        "overwrite": {
+          "description": "Replace an existing preset with the same name.",
+          "name": "Overwrite"
+        },
+        "preset": {
+          "description": "Name to save the preset under.",
+          "name": "Preset"
+        }
+      },
+      "name": "Save preset"
+    },
+    "list_presets": {
+      "name": "List presets",
+      "description": "Return the full preset library (names and contents) as a service response. Use it in scripts and automations with a response variable."
+    },
+    "set_members": {
+      "name": "Set toggles and member sets",
+      "description": "Change a group's toggles and member sets directly. Only the fields you pass are changed; everything else is left as it is. Member lists are limited to the group's base members. The call is refused while the group's members form a cycle — the group containing itself, directly or through a member group.",
+      "fields": {
+        "entity_id": {
+          "name": "Group",
+          "description": "The Asymmetric Group light entity."
+        },
+        "asymmetric_power": {
+          "name": "Asymmetric power",
+          "description": "Turn the power toggle on or off."
+        },
+        "power_on_members": {
+          "name": "Power-ON members",
+          "description": "Lights that turn on with the group while Asymmetric power is on."
+        },
+        "power_off_members": {
+          "name": "Power-OFF members",
+          "description": "Lights that turn off with the group while Asymmetric power is on."
+        },
+        "asymmetric_attributes": {
+          "name": "Asymmetric attributes",
+          "description": "Turn the attributes toggle on or off."
+        },
+        "attribute_members": {
+          "name": "Attribute members",
+          "description": "Lights that receive brightness and colour changes while Asymmetric attributes is on."
+        },
+        "asymmetric_state": {
+          "name": "Asymmetric state",
+          "description": "Turn the state toggle on or off."
+        },
+        "state_members": {
+          "name": "State members",
+          "description": "Lights that decide the group's on/off state while Asymmetric state is on."
+        },
+        "enforce_power_scope": {
+          "name": "Enforce power scope",
+          "description": "Turn the scope-enforcement toggle on or off."
+        }
+      }
+    }
+  }
+}

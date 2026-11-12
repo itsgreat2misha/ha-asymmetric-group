@@ -1,0 +1,7 @@
+# HA-level test harness. The pytest-homeassistant-custom-component
+# release pins the Home Assistant version it tests against; 0.13.375
+# corresponds to Home Assistant 2026.10.4. Bump this pin to move the
+# HA version under test. Note: Home Assistant 2026.10+ requires
+# Python 3.14, so the ha-tests CI job must run Python 3.14 with
+# this pin.
+pytest-homeassistant-custom-component==0.13.375

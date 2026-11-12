@@ -1,0 +1,15 @@
+# Dependabot version updates.
+# - github-actions: keeps the workflow action versions current.
+# - pip: the only pip manifest in this repo is requirements_test.txt
+#   (the Home Assistant test-harness pin), so this ecosystem tracks
+#   test tooling only; the integration itself has no pip dependencies.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly

@@ -1,0 +1,16 @@
+# Ruff configuration, modelled on Home Assistant core's setup
+# (line length 88, modern pyupgrade/refurb rule families) but limited
+# to the rule set this codebase is held to in CI.
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "RUF",  # Ruff-specific rules
+    "FURB", # refurb
+]

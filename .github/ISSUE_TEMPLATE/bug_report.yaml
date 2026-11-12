@@ -1,0 +1,43 @@
+name: Bug report
+description: Report a problem with Asymmetric Group
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please include the versions and a log excerpt —
+        reports without them are hard to act on.
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant version
+      placeholder: "e.g. 2025.6.1"
+    validations:
+      required: true
+  - type: input
+    id: integration_version
+    attributes:
+      label: Asymmetric Group version
+      placeholder: "e.g. 1.4.0"
+    validations:
+      required: true
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened, and what did you expect?
+      placeholder: Describe the group's switches/sets, the command you sent to the group, and what the member lights did.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: |
+        Reproduce with debug logging enabled if you can:
+        logger:
+          logs:
+            custom_components.asymmetric_group: debug
+      render: text
+    validations:
+      required: false
