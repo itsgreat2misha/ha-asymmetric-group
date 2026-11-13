@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-11-13
+
+### Fixed
+
+- Documentation corrections from a claim-by-claim validation of
+  the README against the code: the Enforce section no longer lists
+  editing the sets in Configure as an enforcement trigger, the
+  setup/options descriptions scope the Enforce wording to runtime
+  changes, presets are documented as applied via the
+  `apply_preset` service (the Configure preset editor only creates
+  and edits them), the "controllable from automations" claims now
+  name the actual surface (switches, sets, presets), and the
+  ambient-lights example states that both presets switch
+  Asymmetric power on. No functional changes.
+
 ## [1.0.3] - 2026-11-13
 
 ### Changed
