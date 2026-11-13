@@ -86,11 +86,11 @@ A member can itself be a light group — a regular group or another Asymmetric G
 - Lights that joined the set are turned on — but only if at least one light from the old set is on. If no old-set light is on, nothing turns on; the new set just takes effect next time.
 - A light that is in neither the old nor the new set (turned on by hand) is left alone, and doesn't count as the group being lit.
 
-This happens when you flip the Asymmetric power switch, edit the sets, apply a preset, or call `set_members` — never on startup. The change waits until the affected lights have actually switched (up to 10 seconds), so automations that use it at the start of a scene run in order. A light that is already offline is skipped silently; a light whose new state can't be confirmed is dropped from the wait and named once in the log.
+This happens when you flip the Asymmetric power switch, apply a preset, or call `set_members` — never on startup. The change waits until the affected lights have actually switched (up to 10 seconds), so automations that use it at the start of a scene run in order. A light that is already offline is skipped silently; a light whose new state can't be confirmed is dropped from the wait and named once in the log.
 
 ## Controlling groups from automations
 
-Everything about a group can be driven from automations and scripts:
+A group's switches, sets, and presets can all be driven from automations and scripts:
 
 - **Flip a behaviour on or off** with the group's switches, e.g. an "evening mode" automation turns on *Asymmetric power* and from then on the group turns on partially but always turns off fully.
 - **Change sets and switches on the fly** with the `asymmetric_group.set_members` service. Only the fields you include are changed:
@@ -118,7 +118,7 @@ data:
 
 ## Presets
 
-A preset is a named bundle of settings — switch positions and light sets — kept in one library shared by all your Asymmetric Groups. Apply it to any group from an automation, a script, or the group's **Configure → Preset library** editor.
+A preset is a named bundle of settings — switch positions and light sets — kept in one library shared by all your Asymmetric Groups. Apply it to any group from an automation or a script with the `apply_preset` service; the **Configure → Preset library** editor is where presets are created and edited.
 
 A preset only needs to contain the settings it should change. Settings it doesn't mention are left alone, which makes two styles possible:
 
@@ -133,7 +133,7 @@ Light sets in a preset are matched against each group's own base lights when app
 - **Keep the vanity out of bath time** *(Attributes)* — Bathroom group with the ceiling lights in the Attribute set and the vanity left out. Dimming the group for a bath never drags the vanity along; plain on/off still controls it with the group.
 - **A closet that doesn't light up the dashboard** *(State)* — Hallway group includes the closet light, so "hallway off" sweeps it too — but the State set is the ceiling lights only, so a forgotten closet doesn't make the hallway show as on.
 - **Movie night, applied instantly** *(Enforce power scope)* — Living room with Enforce on: when the movie automation flips Asymmetric power, the ceiling lights drop out right away, leaving just the lamps — no separate turn-off step.
-- **Ambient lights that join at night** *(Presets)* — A living room group holds the main lights plus an LED strip as base members. The *Day* preset keeps the strip out of the Power-ON set, so by day the group is just the main lights. At dusk an automation applies the *Evening* preset: the strip joins the Power-ON set, and Asymmetric attributes is on with the Attribute set limited to the main lights — the strip now turns on and off with the room, but keeps its own brightness, untouched when the group is dimmed. In the morning, *Day* takes it back out.
+- **Ambient lights that join at night** *(Presets)* — A living room group holds the main lights plus an LED strip as base members. Both presets switch Asymmetric power on. The *Day* preset keeps the strip out of the Power-ON set, so by day the group is just the main lights. At dusk an automation applies the *Evening* preset: the strip joins the Power-ON set, and Asymmetric attributes is on with the Attribute set limited to the main lights — the strip now turns on and off with the room, but keeps its own brightness, untouched when the group is dimmed. In the morning, *Day* takes it back out.
 
 ## Good to know
 
@@ -168,7 +168,7 @@ No — it sits next to it. Use regular groups unless you need different lights f
 Nothing changes on any group. Applying a preset copies its settings into the group, so groups keep working without it.
 
 **Can I create or delete groups from automations?**
-Groups themselves are created in the UI like other helpers. Everything about an existing group — its switches, its light sets, and presets — is controllable from automations and scripts.
+Groups themselves are created in the UI like other helpers. Its switches, its light sets, and presets are controllable from automations and scripts.
 
 ## License
 

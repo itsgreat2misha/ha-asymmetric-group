@@ -28,7 +28,7 @@
           "enforce_power_scope": "Enforce power scope",
           "hide_members": "Hide members"
         },
-        "description": "These switches set the starting state of the group's own switches. Enforce power scope: when the Power-ON set changes, lights that dropped out are switched off right away, and lights that joined are switched on right away, but only if a light from the old Power-ON set is on. Hide members: hide the member lights and show only the group, like a regular group. Each behaviour you switch on gets its own member-set step next; behaviours left off use the full base set.",
+        "description": "These switches set the starting state of the group's own switches. Enforce power scope: when the Power-ON set changes at runtime, lights that dropped out are switched off right away, and lights that joined are switched on right away, but only if a light from the old Power-ON set is on. Hide members: hide the member lights and show only the group, like a regular group. Each behaviour you switch on gets its own member-set step next; behaviours left off use the full base set.",
         "title": "Defaults and options"
       },
       "state": {
@@ -87,7 +87,7 @@
           "enforce_power_scope": "Enforce power scope",
           "hide_members": "Hide members"
         },
-        "description": "Saving applies these settings to the group right away, replacing any changes made by presets or set_members since. Enforce power scope: when the Power-ON set changes, lights that dropped out are switched off right away, and lights that joined are switched on right away, but only if a light from the old Power-ON set is on. Hide members: hide the member lights and show only the group, like a regular group. Each behaviour you switch on gets its own member-set step next; behaviours left off use the full base set.",
+        "description": "Saving applies these settings to the group right away, replacing any changes made by presets or set_members since. Enforce power scope: when the Power-ON set changes at runtime, lights that dropped out are switched off right away, and lights that joined are switched on right away, but only if a light from the old Power-ON set is on. Hide members: hide the member lights and show only the group, like a regular group. Each behaviour you switch on gets its own member-set step next; behaviours left off use the full base set.",
         "title": "Defaults and options"
       },
       "members_attributes": {
