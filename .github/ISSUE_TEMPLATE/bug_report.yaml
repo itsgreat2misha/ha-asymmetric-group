@@ -20,7 +20,7 @@ body:
     id: integration_version
     attributes:
       label: Asymmetric Group version
-      description: Found on the integration's HACS page.
+      description: Found on the integration's Marketplace page.
       placeholder: "e.g. 1.0.0"
     validations:
       required: true

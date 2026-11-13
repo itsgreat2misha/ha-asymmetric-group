@@ -1,6 +1,6 @@
 # Asymmetric Group
 
-[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz)
+[![Marketplace Custom](https://img.shields.io/badge/Marketplace-Custom-41BDF5.svg)](https://hacs.xyz)
 
 A Home Assistant helper for light groups where different lights can do different jobs: one set turns on, another turns off, another takes brightness and colour changes, and another decides whether the group shows as "on". Each of those can be switched on or off at any time.
 
@@ -12,23 +12,25 @@ With an Asymmetric Group that's just how the group is set up, so it works the sa
 
 ## Installation
 
+On Home Assistant before 2026.11, the Marketplace is called HACS — the steps are identical.
+
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=itsgreat2misha&repository=ha-asymmetric-group&category=integration)
 
-1. In **HACS**, open **⋮ → Custom repositories** and add `https://github.com/itsgreat2misha/ha-asymmetric-group` as an **Integration** (or use the My Home Assistant button above).
-2. Install **Asymmetric Group** from HACS and restart Home Assistant.
+1. In the **Marketplace** (**Settings → Marketplace**), open **⋮ → Custom repositories** and add `https://github.com/itsgreat2misha/ha-asymmetric-group` as an **Integration** (or use the My Home Assistant button above).
+2. Install **Asymmetric Group** from the Marketplace and restart Home Assistant.
 3. Go to **Settings → Devices & services → Helpers → Create helper → Asymmetric Group**.
 
 Requires Home Assistant 2024.5.0 or newer.
 
 ## Upgrading
 
-Update through HACS as usual: **HACS → Asymmetric Group → Update**, then restart Home Assistant when prompted. Group configurations, presets, and runtime switch positions are stored by Home Assistant and survive upgrades; no re-setup is needed.
+Update through the Marketplace as usual: **Marketplace → Asymmetric Group → Update**, then restart Home Assistant when prompted. Group configurations, presets, and runtime switch positions are stored by Home Assistant and survive upgrades; no re-setup is needed.
 
 ## Uninstalling
 
 1. Delete each Asymmetric Group helper (**Settings → Devices & services → Helpers**, open the group, **⋮ → Delete**). Do this while the integration is still installed: deleting a group removes its group light and its four switches and un-hides any lights it hid — and that cleanup needs the integration present. The member lights themselves are never deleted.
-2. In **HACS**, open **Asymmetric Group → ⋮ → Remove**, then restart Home Assistant.
-3. Optionally remove the custom repository from **HACS → ⋮ → Custom repositories** afterwards.
+2. In the **Marketplace**, open **Asymmetric Group → ⋮ → Remove**, then restart Home Assistant.
+3. Optionally remove the custom repository from **Marketplace → ⋮ → Custom repositories** afterwards.
 
 ## Setting up a group
 
@@ -144,7 +146,7 @@ Light sets in a preset are matched against each group's own base lights when app
 
 ## Troubleshooting
 
-- **The helper doesn't appear under Create helper.** The integration isn't loaded: confirm the HACS install finished, restart Home Assistant, and check **Settings → System → Logs** for `asymmetric_group` errors. HACS also hides integrations from Home Assistant versions older than the minimum in `hacs.json` (2024.5.0).
+- **The helper doesn't appear under Create helper.** The integration isn't loaded: confirm the Marketplace install finished, restart Home Assistant, and check **Settings → System → Logs** for `asymmetric_group` errors. The Marketplace also hides integrations from Home Assistant versions older than the minimum in `hacs.json` (2024.5.0).
 - **A group light is missing or unavailable after editing members.** Editing a group under **Configure** reloads it. If a member light was renamed or removed, re-open **Configure** and re-pick the member sets — member lists are filtered to the group's base members, so a removed light drops out of the sets. Until then the group may show as unknown.
 - **Turning the group on lit fewer lights than expected.** That's the feature, most likely: check the group's **Asymmetric power** switch — while it is on, turn-on uses only the Power-ON set. The group's `effective_power_on_members` attribute shows the set currently in effect.
 - **The group shows "on" while its lights look off (or the reverse).** Check the **Asymmetric state** switch and the `effective_state_members` attribute: while the switch is on, only the State set decides the group's state.
