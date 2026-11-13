@@ -13,8 +13,10 @@ import unittest
 try:
     from homeassistant import config_entries
     from homeassistant.config_entries import ConfigEntryState
-    from homeassistant.core import HomeAssistant
+    from homeassistant.const import EVENT_CALL_SERVICE
+    from homeassistant.core import HomeAssistant, callback
     from homeassistant.data_entry_flow import FlowResultType
+    from homeassistant.helpers import entity_registry as er
     from pytest_homeassistant_custom_component.common import MockConfigEntry
 except ImportError:
     # The HA test harness (pytest-homeassistant-custom-component and a
@@ -41,6 +43,7 @@ from custom_components.asymmetric_group.const import (
     DOMAIN,
 )
 from custom_components.asymmetric_group.presets import async_get_preset_store
+from tests.test_nesting import _BRIGHTNESS_ATTRS, _member_calls, _track_light_calls
 
 MEMBERS = ["light.bedroom_1", "light.bedroom_2", "light.bedroom_3"]
 
@@ -339,3 +342,367 @@ async def test_group_reports_member_color_temp_range_in_kelvin(
     assert group is not None
     assert group.attributes["min_color_temp_kelvin"] == 2000
     assert group.attributes["max_color_temp_kelvin"] == 7000
+
+
+# ----------------------------------------------------------------------
+# Base-member editing in the options flow (core-group parity).
+async def _setup_entry(hass: HomeAssistant, data: dict) -> MockConfigEntry:
+    entry = MockConfigEntry(domain=DOMAIN, title=data[CONF_NAME], data=data)
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    return entry
+
+
+async def _open_members_step(hass: HomeAssistant, entry: MockConfigEntry):
+    """Open Configure -> members and return the members form result."""
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "members"}
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "members"
+    return result
+
+
+async def test_options_add_base_member(hass: HomeAssistant) -> None:
+    """Adding a base member in Configure saves it and reloads."""
+    entry = await _setup_entry(hass, _entry_data())
+    result = await _open_members_step(hass, entry)
+    new_base = [*MEMBERS, "light.bedroom_4"]
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {**TOGGLES_OFF, CONF_BASE_MEMBERS: new_base}
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_BASE_MEMBERS] == new_base
+
+    await hass.async_block_till_done()
+    assert entry.options[CONF_BASE_MEMBERS] == new_base
+    assert entry.state == ConfigEntryState.LOADED
+    group = hass.states.get("light.test_group")
+    assert group is not None
+    # Same group entity, now reporting the widened base set.
+    assert group.attributes["entity_id"] == new_base
+
+
+async def test_options_remove_base_member_filters_subgroups(
+    hass: HomeAssistant,
+) -> None:
+    """Removing a base member drops it from every subgroup on save."""
+    entry = await _setup_entry(
+        hass,
+        _entry_data(
+            **{
+                CONF_ASYMMETRIC_POWER: True,
+                CONF_POWER_ON_MEMBERS: ["light.bedroom_1"],
+            }
+        ),
+    )
+    kept = ["light.bedroom_1", "light.bedroom_2"]
+    result = await _open_members_step(hass, entry)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            **TOGGLES_OFF,
+            CONF_ASYMMETRIC_POWER: True,
+            CONF_BASE_MEMBERS: kept,
+        },
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "members_power"
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            CONF_POWER_ON_MEMBERS: ["light.bedroom_1"],
+            CONF_POWER_OFF_MEMBERS: MEMBERS,
+        },
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_POWER_ON_MEMBERS] == ["light.bedroom_1"]
+    assert result["data"][CONF_POWER_OFF_MEMBERS] == kept
+    assert result["data"][CONF_ATTRIBUTE_MEMBERS] == kept
+    assert result["data"][CONF_STATE_MEMBERS] == kept
+
+    await hass.async_block_till_done()
+    group = hass.states.get("light.test_group")
+    assert group is not None
+    assert group.attributes["entity_id"] == kept
+    assert group.attributes["effective_power_on_members"] == ["light.bedroom_1"]
+
+
+async def test_options_removed_member_hidden_by_group_is_unhidden(
+    hass: HomeAssistant,
+) -> None:
+    """A base edit un-hides a removed member the group had hidden.
+
+    A member hidden by the user is never touched, and a member
+    still in the base stays hidden by the group.
+    """
+    registry = er.async_get(hass)
+    kept = registry.async_get_or_create(
+        "light", "demo", "base_kept_uid", suggested_object_id="base_kept"
+    )
+    removed = registry.async_get_or_create(
+        "light", "demo", "base_removed_uid", suggested_object_id="base_removed"
+    )
+    user_hidden = registry.async_get_or_create(
+        "light", "demo", "base_user_uid", suggested_object_id="base_user"
+    )
+    members = [kept.entity_id, removed.entity_id, user_hidden.entity_id]
+    registry.async_update_entity(
+        user_hidden.entity_id, hidden_by=er.RegistryEntryHider.USER
+    )
+    entry = await _setup_entry(
+        hass,
+        _entry_data(
+            **{
+                CONF_NAME: "Hide Group",
+                CONF_BASE_MEMBERS: members,
+                CONF_POWER_ON_MEMBERS: members,
+                CONF_POWER_OFF_MEMBERS: members,
+                CONF_ATTRIBUTE_MEMBERS: members,
+                CONF_STATE_MEMBERS: members,
+                CONF_HIDE_MEMBERS: True,
+            }
+        ),
+    )
+    # Setup hid the two members that were not already hidden.
+    assert (
+        registry.async_get(kept.entity_id).hidden_by
+        == er.RegistryEntryHider.INTEGRATION
+    )
+    assert (
+        registry.async_get(removed.entity_id).hidden_by
+        == er.RegistryEntryHider.INTEGRATION
+    )
+    assert (
+        registry.async_get(user_hidden.entity_id).hidden_by
+        == er.RegistryEntryHider.USER
+    )
+
+    result = await _open_members_step(hass, entry)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            **TOGGLES_OFF,
+            CONF_HIDE_MEMBERS: True,
+            CONF_BASE_MEMBERS: [kept.entity_id],
+        },
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    await hass.async_block_till_done()
+    # The removed member we hid is shown again...
+    assert registry.async_get(removed.entity_id).hidden_by is None
+    # ...the user-hidden member is exactly as the user left it...
+    assert (
+        registry.async_get(user_hidden.entity_id).hidden_by
+        == er.RegistryEntryHider.USER
+    )
+    # ...and the kept member is still hidden by the group.
+    assert (
+        registry.async_get(kept.entity_id).hidden_by
+        == er.RegistryEntryHider.INTEGRATION
+    )
+
+
+async def test_options_base_edit_creating_cycle_is_rejected(
+    hass: HomeAssistant,
+) -> None:
+    """Adding the group itself to its own base is refused, unsaved."""
+    entry = await _setup_entry(hass, _entry_data())
+    result = await _open_members_step(hass, entry)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {**TOGGLES_OFF, CONF_BASE_MEMBERS: [*MEMBERS, "light.test_group"]},
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "members"
+    assert result["errors"] == {CONF_BASE_MEMBERS: "group_member_cycle"}
+    assert entry.options == {}
+
+
+async def test_options_base_change_rebases_tracking_sets_only(
+    hass: HomeAssistant,
+) -> None:
+    """Sets still listing the whole old base follow it to the new
+    base; narrowed sets keep exactly their own membership."""
+    entry = await _setup_entry(
+        hass,
+        _entry_data(
+            **{
+                CONF_POWER_ON_MEMBERS: ["light.bedroom_1", "light.bedroom_2"],
+                CONF_STATE_MEMBERS: ["light.bedroom_1"],
+            }
+        ),
+    )
+    new_base = ["light.bedroom_1", "light.bedroom_2", "light.bedroom_4"]
+    result = await _open_members_step(hass, entry)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {**TOGGLES_OFF, CONF_BASE_MEMBERS: new_base}
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    data = result["data"]
+    # Tracking sets (they listed the whole old base) follow...
+    assert data[CONF_POWER_OFF_MEMBERS] == new_base
+    assert data[CONF_ATTRIBUTE_MEMBERS] == new_base
+    # ...narrowed sets are only filtered (bedroom_4 not added).
+    assert data[CONF_POWER_ON_MEMBERS] == ["light.bedroom_1", "light.bedroom_2"]
+    assert data[CONF_STATE_MEMBERS] == ["light.bedroom_1"]
+
+
+async def test_options_added_member_joins_tracking_sets_only(
+    hass: HomeAssistant,
+) -> None:
+    """Runtime view: an added member is in the tracking Power-OFF
+    set after the edit but stays out of the curated Power-ON set."""
+    for member in [*MEMBERS, "light.bedroom_4"]:
+        hass.states.async_set(member, "off", dict(_BRIGHTNESS_ATTRS))
+    entry = await _setup_entry(
+        hass,
+        _entry_data(
+            **{
+                CONF_ASYMMETRIC_POWER: True,
+                CONF_POWER_ON_MEMBERS: ["light.bedroom_1"],
+            }
+        ),
+    )
+    new_base = [*MEMBERS, "light.bedroom_4"]
+    result = await _open_members_step(hass, entry)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            **TOGGLES_OFF,
+            CONF_ASYMMETRIC_POWER: True,
+            CONF_BASE_MEMBERS: new_base,
+        },
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "members_power"
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            CONF_POWER_ON_MEMBERS: ["light.bedroom_1"],
+            CONF_POWER_OFF_MEMBERS: new_base,
+        },
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    await hass.async_block_till_done()
+    group = hass.states.get("light.test_group")
+    assert group is not None
+    assert group.attributes["entity_id"] == new_base
+    assert group.attributes["effective_power_on_members"] == ["light.bedroom_1"]
+    assert group.attributes["effective_power_off_members"] == new_base
+
+
+async def test_options_base_edit_does_not_enforce_but_set_members_does(
+    hass: HomeAssistant,
+) -> None:
+    """A Configure base edit never switches lights (it reseeds and
+    reloads, R54-style); the same narrowing via set_members with
+    Enforce on turns the dropped lit member off at once."""
+    for member in MEMBERS:
+        state = "off" if member == "light.bedroom_3" else "on"
+        hass.states.async_set(member, state, dict(_BRIGHTNESS_ATTRS))
+    entry = await _setup_entry(
+        hass,
+        _entry_data(
+            **{
+                CONF_ASYMMETRIC_POWER: True,
+                CONF_ENFORCE_POWER_SCOPE: True,
+                CONF_POWER_ON_MEMBERS: ["light.bedroom_1", "light.bedroom_2"],
+            }
+        ),
+    )
+    recorded = _track_light_calls(hass)
+
+    # Remove the lit bedroom_2 from the base in Configure.
+    result = await _open_members_step(hass, entry)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            **TOGGLES_OFF,
+            CONF_ASYMMETRIC_POWER: True,
+            CONF_ENFORCE_POWER_SCOPE: True,
+            CONF_BASE_MEMBERS: ["light.bedroom_1", "light.bedroom_3"],
+        },
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "members_power"
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            CONF_POWER_ON_MEMBERS: ["light.bedroom_1", "light.bedroom_2"],
+            CONF_POWER_OFF_MEMBERS: ["light.bedroom_1", "light.bedroom_3"],
+        },
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    await hass.async_block_till_done()
+    # The saved Power-ON set was filtered to the new base, but no
+    # light call was issued for the removed member; it is still on.
+    assert entry.options[CONF_POWER_ON_MEMBERS] == ["light.bedroom_1"]
+    assert _member_calls(recorded, {"light.bedroom_2"}) == []
+    assert hass.states.get("light.bedroom_2").state == "on"
+
+    # Control: a second group where set_members narrows the Power-ON
+    # set away from a lit member — enforcement turns it off at once.
+    ctrl = ["light.ctrl_1", "light.ctrl_2"]
+    for member in ctrl:
+        hass.states.async_set(member, "on", dict(_BRIGHTNESS_ATTRS))
+    await _setup_entry(
+        hass,
+        _entry_data(
+            **{
+                CONF_NAME: "Control Group",
+                CONF_BASE_MEMBERS: ctrl,
+                CONF_POWER_ON_MEMBERS: ctrl,
+                CONF_POWER_OFF_MEMBERS: ctrl,
+                CONF_ATTRIBUTE_MEMBERS: ctrl,
+                CONF_STATE_MEMBERS: ctrl,
+                CONF_ASYMMETRIC_POWER: True,
+                CONF_ENFORCE_POWER_SCOPE: True,
+            }
+        ),
+    )
+
+    @callback
+    def _respond(event) -> None:
+        # The control light answers its turn_off as it is issued, so
+        # enforcement's settle check sees the new state immediately.
+        if event.data.get("domain") != "light":
+            return
+        if event.data.get("service") != "turn_off":
+            return
+        data = event.data.get("service_data") or {}
+        raw = data.get("entity_id") or []
+        targets = [raw] if isinstance(raw, str) else list(raw)
+        if "light.ctrl_2" in targets:
+            hass.states.async_set(
+                "light.ctrl_2", "off", dict(_BRIGHTNESS_ATTRS)
+            )
+
+    hass.bus.async_listen(EVENT_CALL_SERVICE, _respond)
+    await hass.services.async_call(
+        DOMAIN,
+        "set_members",
+        {
+            "entity_id": "light.control_group",
+            CONF_POWER_ON_MEMBERS: ["light.ctrl_1"],
+        },
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+    calls = _member_calls(recorded, {"light.ctrl_2"})
+    assert any(call["service"] == "turn_off" for call in calls)
+
+
+async def test_options_empty_base_is_rejected(hass: HomeAssistant) -> None:
+    """The base set cannot be emptied in Configure."""
+    entry = await _setup_entry(hass, _entry_data())
+    result = await _open_members_step(hass, entry)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {**TOGGLES_OFF, CONF_BASE_MEMBERS: []}
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "members"
+    assert result["errors"] == {CONF_BASE_MEMBERS: "base_members_required"}
+    assert entry.options == {}

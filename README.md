@@ -41,7 +41,7 @@ Update through the Marketplace as usual: **Marketplace → Asymmetric Group → 
    - **State** — the lights that decide whether the group counts as "on".
 3. Optionally enable **Hide members** (hide the individual lights, like a regular group), **All state lights on** (the group is only "on" when *all* of its state lights are on), and **Enforce power scope** (when the Power-ON set changes, reconcile lights that are already on — see *Enforce power scope* below).
 
-You can change all of this later under the group's **Configure** button. Settings for behaviours you didn't enable simply use all the base lights.
+You can change the switches, sets, and base members later under the group's **Configure** button. The group's name is fixed at creation. Settings for behaviours you didn't enable simply use all the base lights.
 
 ## How it works
 
