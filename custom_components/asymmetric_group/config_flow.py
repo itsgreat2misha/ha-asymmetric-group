@@ -21,9 +21,12 @@ group (its set resolves to base), and if it is switched on later from
 its companion switch before being configured here, its subgroup
 defaults to the full base set.
 
-The options flow mirrors this: "members" runs the same conditional
+The options flow mirrors this: "members" opens with the base
+members plus the toggles (base members ARE editable here — a set
+that still tracks the base set follows it when it changes, a
+narrowed set is filtered to it), then runs the same conditional
 chain (step ids members / members_power / members_attributes /
-members_state), and "presets" opens the global preset library editor.
+members_state); "presets" opens the global preset library editor.
 """
 
 from __future__ import annotations
@@ -72,7 +75,8 @@ _TOGGLE_PRESET_KEYS = (
     CONF_ENFORCE_POWER_SCOPE,
 )
 
-# Keys the options flow is allowed to write (name/base stay in data).
+# Keys the options flow is allowed to write (only the name stays
+# in data — core groups don't offer renaming in Configure either).
 _OPTION_KEYS = (
     CONF_ASYMMETRIC_POWER,
     CONF_ASYMMETRIC_ATTRIBUTES,
@@ -84,6 +88,7 @@ _OPTION_KEYS = (
     CONF_STATE_MEMBERS,
     CONF_HIDE_MEMBERS,
     CONF_ALL_ENTITIES,
+    CONF_BASE_MEMBERS,
 )
 
 
@@ -160,6 +165,19 @@ def _toggles_schema(defaults: dict) -> vol.Schema:
             ): BooleanSelector(),
         }
     )
+
+
+def _options_members_schema(defaults: dict) -> vol.Schema:
+    """Options "members" form: base members + the toggles in one
+    form, like core's single options form for groups."""
+    fields: dict = {
+        vol.Required(
+            CONF_BASE_MEMBERS,
+            default=list(defaults.get(CONF_BASE_MEMBERS) or []),
+        ): _light_selector(),
+    }
+    fields.update(_toggles_schema(defaults).schema)
+    return vol.Schema(fields)
 
 
 def _power_schema(defaults: dict) -> vol.Schema:
@@ -361,23 +379,29 @@ class AsymmetricGroupOptionsFlow(OptionsFlow):
             )
             return self.async_show_form(
                 step_id="members",
-                data_schema=_toggles_schema(self._working),
+                data_schema=_options_members_schema(self._working),
             )
         self._working.update(user_input)
-        # Base members cannot be edited here, but a cycle can appear
+        new_base = list(self._working.get(CONF_BASE_MEMBERS) or [])
+        if not new_base:
+            return self.async_show_form(
+                step_id="members",
+                data_schema=_options_members_schema(self._working),
+                errors={CONF_BASE_MEMBERS: "base_members_required"},
+            )
+        # The cycle check runs against the NEW base: adding members
+        # is the dangerous direction, and a cycle can also appear
         # after creation (a member group edited elsewhere to include
         # this group). Refuse to save a cyclic configuration: the
         # membership would make power/state fan-out chase itself.
         own_entity_id = _group_entity_id(self.hass, entry.entry_id)
         if own_entity_id is not None and _creates_cycle(
-            self.hass,
-            own_entity_id,
-            list(self._working.get(CONF_BASE_MEMBERS) or []),
+            self.hass, own_entity_id, new_base
         ):
             return self.async_show_form(
                 step_id="members",
-                data_schema=_toggles_schema(self._working),
-                errors={"base": "group_member_cycle_options"},
+                data_schema=_options_members_schema(self._working),
+                errors={CONF_BASE_MEMBERS: "group_member_cycle"},
             )
         return await self._route_next("")
 
@@ -428,6 +452,32 @@ class AsymmetricGroupOptionsFlow(OptionsFlow):
 
     async def _finish_members(self) -> ConfigFlowResult:
         entry = self._config_entry
+        merged = {**entry.data, **entry.options}
+        old_base = list(merged.get(CONF_BASE_MEMBERS) or [])
+        new_base = list(self._working.get(CONF_BASE_MEMBERS) or [])
+        # Keep the subgroups consistent with the new base. A subgroup
+        # that still lists the whole old base was tracking the base
+        # set, so it follows to the new base; a narrowed subgroup
+        # keeps its own membership, filtered to the new base. This
+        # save does NOT reconcile any lights — like every Configure
+        # edit it reseeds and reloads; enforcement only runs on live
+        # runtime changes (switches, presets, set_members).
+        for key in MEMBER_KEYS:
+            current = self._working.get(key)
+            if not isinstance(current, list):
+                continue
+            if current == old_base:
+                self._working[key] = list(new_base)
+            else:
+                self._working[key] = [m for m in current if m in new_base]
+        # A member removed from the base that this group hid must be
+        # shown again — the same cleanup async_remove_entry runs on
+        # delete, or the light would stay hidden forever.
+        removed = [m for m in old_base if m not in new_base]
+        if removed:
+            from . import _unhide_members
+
+            _unhide_members(self.hass, removed)
         # Options edits re-seed runtime state: clear the per-entry
         # runtime store so stored toggles/subgroups don't shadow
         # the new config after the reload triggered by saving.

@@ -214,21 +214,28 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unloaded
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Clean up when a group is deleted: unhide members we hid.
+def _unhide_members(hass: HomeAssistant, member_ids: list[str]) -> None:
+    """Show members this integration hid (hidden_by = INTEGRATION).
 
-    Without this, deleting a group with hide_members on would leave
-    its lights hidden forever (hidden_by = INTEGRATION with nothing
-    left to undo it).
+    Only members *we* hid are shown again; a member the user hid
+    themselves is left alone. Used when a group is deleted and when
+    a member is removed from a group's base in Configure — both
+    would otherwise leave the light hidden forever, with nothing
+    left to undo it.
     """
     registry = er.async_get(hass)
-    config = merged_config(entry)
-    for member_id in config.get("base_members") or []:
+    for member_id in member_ids:
         reg_entry = registry.async_get(member_id)
         if reg_entry is not None and (
             reg_entry.hidden_by == er.RegistryEntryHider.INTEGRATION
         ):
             registry.async_update_entity(member_id, hidden_by=None)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Clean up when a group is deleted: unhide members we hid."""
+    config = merged_config(entry)
+    _unhide_members(hass, list(config.get("base_members") or []))
 
 
 def get_runtime(hass: HomeAssistant, entry_id: str) -> GroupRuntime:

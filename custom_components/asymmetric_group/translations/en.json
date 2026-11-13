@@ -68,7 +68,7 @@
     "error": {
       "preset_name_required": "A name is required for a new preset.",
       "group_member_cycle": "The group would contain itself, directly or through a member group. Remove the member that loops back to this group.",
-      "group_member_cycle_options": "This group can't be saved: one of its member groups now includes this group, so the group would contain itself. Base members can't be changed here — edit the member group that includes this one to break the loop."
+      "base_members_required": "Choose at least one base member."
     },
     "step": {
       "init": {
@@ -84,10 +84,11 @@
           "asymmetric_attributes": "Asymmetric attributes",
           "asymmetric_power": "Asymmetric power",
           "asymmetric_state": "Asymmetric state",
+          "base_members": "Base members",
           "enforce_power_scope": "Enforce power scope",
           "hide_members": "Hide members"
         },
-        "description": "Saving applies these settings to the group right away, replacing any changes made by presets or set_members since. Enforce power scope: when the Power-ON set changes at runtime, lights that dropped out are switched off right away, and lights that joined are switched on right away, but only if a light from the old Power-ON set is on. Hide members: hide the member lights and show only the group, like a regular group. Each behaviour you switch on gets its own member-set step next; behaviours left off use the full base set.",
+        "description": "Base members are every light involved in this group in any way; the smaller sets are picked from these lights, and a set that still lists the whole base set follows it when the base set changes. Saving applies these settings to the group right away, replacing any changes made by presets or set_members since. Enforce power scope: when the Power-ON set changes at runtime, lights that dropped out are switched off right away, and lights that joined are switched on right away, but only if a light from the old Power-ON set is on. Hide members: hide the member lights and show only the group, like a regular group. Each behaviour you switch on gets its own member-set step next; behaviours left off use the full base set.",
         "title": "Defaults and options"
       },
       "members_attributes": {

@@ -16,7 +16,7 @@ Covered here:
   (c) Enforce Power Scope settling on a subgroup member;
   (d) cycle rejection in the config-flow validation helper, in
       the flow itself (direct and indirect), and in the options
-      flow (with its own error message);
+      flow;
   (e) regression: member sets and presets containing a group id
       round-trip unchanged.
 """
@@ -399,14 +399,15 @@ async def test_flow_rejects_indirect_cycle(hass: HomeAssistant) -> None:
     assert hass.config_entries.async_entries(DOMAIN) == []
 
 
-async def test_options_flow_rejects_cycle_with_options_message(
+async def test_options_flow_rejects_cycle_formed_after_creation(
     hass: HomeAssistant,
 ) -> None:
     """A cycle formed after creation is refused in the options flow.
 
-    Base members cannot be edited there, so the refusal uses the
-    options-specific error key whose text points at the member
-    group that loops back, not at removing a member.
+    The refusal lands on the base-members field with the shared
+    group_member_cycle error: base members are editable in the
+    options flow, so removing the member that loops back is the
+    fix offered there too.
     """
     entry = await _setup_entry(
         hass, _entry_data("Outer Group", ["light.inner_group"])
@@ -428,7 +429,7 @@ async def test_options_flow_rejects_cycle_with_options_message(
     )
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "members"
-    assert result["errors"] == {"base": "group_member_cycle_options"}
+    assert result["errors"] == {CONF_BASE_MEMBERS: "group_member_cycle"}
 
 
 # ----------------------------------------------------------------------
