@@ -6,12 +6,13 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for reporting! Please include the versions and a log excerpt —
+        Thanks for reporting! Please include the versions, your group setup and a log excerpt —
         reports without them are hard to act on.
   - type: input
     id: ha_version
     attributes:
       label: Home Assistant version
+      description: Found under Settings → About.
       placeholder: "e.g. 2025.6.1"
     validations:
       required: true
@@ -19,14 +20,28 @@ body:
     id: integration_version
     attributes:
       label: Asymmetric Group version
+      description: Found on the integration's HACS page.
       placeholder: "e.g. 1.0.0"
     validations:
       required: true
   - type: textarea
+    id: group_setup
+    attributes:
+      label: Group setup
+      description: |
+        The group's switch positions (Asymmetric power / attributes / state, Enforce power scope)
+        and the set currently in effect — the group's effective_power_on_members,
+        effective_attribute_members and effective_state_members attributes (visible in
+        Developer tools → States). Also say how the command was sent: voice, dashboard,
+        automation, or a service call.
+      placeholder: "e.g. Asymmetric power on, Power-ON = [light.a], effective_power_on_members = [light.a]; command sent from a dashboard button"
+    validations:
+      required: false
+  - type: textarea
     id: what_happened
     attributes:
       label: What happened, and what did you expect?
-      placeholder: Describe the group's switches/sets, the command you sent to the group, and what the member lights did.
+      placeholder: Describe the command you sent to the group and what the member lights did, step by step if you can.
     validations:
       required: true
   - type: textarea
@@ -34,10 +49,12 @@ body:
     attributes:
       label: Relevant log output
       description: |
-        Reproduce with debug logging enabled if you can:
+        Reproduce with debug logging enabled if you can. Add this to configuration.yaml,
+        restart Home Assistant, reproduce the problem, then copy the asymmetric_group
+        lines from Settings → System → Logs:
         logger:
           logs:
             custom_components.asymmetric_group: debug
       render: text
     validations:
-      required: false
+      required: true

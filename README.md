@@ -39,7 +39,7 @@ The shared preset library is stored under the integration's storage; removing th
    - **Power** — separate light sets for turning on and turning off.
    - **Attributes** — the lights that receive brightness and colour changes.
    - **State** — the lights that decide whether the group counts as "on".
-3. Optionally enable **Hide members** (hide the individual lights, like a regular group), **All entities** (the group is only "on" when *all* of its state lights are on), and **Enforce power scope** (when the Power-ON set changes, reconcile lights that are already on — see *Enforce power scope* below).
+3. Optionally enable **Hide members** (hide the individual lights, like a regular group), **All state lights on** (the group is only "on" when *all* of its state lights are on), and **Enforce power scope** (when the Power-ON set changes, reconcile lights that are already on — see *Enforce power scope* below).
 
 You can change all of this later under the group's **Configure** button. Settings for behaviours you didn't enable simply use all the base lights.
 
@@ -53,12 +53,16 @@ Each behaviour has its own switch on the group's device page — **Asymmetric po
 | Attributes | Brightness/colour changes go to the Attribute lights | Changes go to all base lights |
 | State | The group's on/off state comes from the State lights | It comes from all base lights |
 
-The brightness and colour the group *reports* are averaged from the Attribute lights that are on — if no Attribute light is on but the group is on another way, they come from whichever base lights are lit (see *Good to know*).
+The brightness and colour the group *reports* are averaged from the Attribute lights that are on — if no Attribute light is on but the group is on another way, they come from whichever base lights are lit.
 
 Two guarantees hold at all times:
 
-- **Changing brightness or colour touches only the Attribute lights.** When a brightness or colour change reaches the group, the lights it can affect are the Attribute set: an Attribute light that is also in the Power-ON set and is off is switched on with the new values, an Attribute light that is already on is adjusted in place, and a Power-ON light that is *not* in the Attribute set is left completely alone — if it's off it stays off, if it's on it keeps its level. Switching a light on with a new brightness or colour takes membership in both sets. A turn-on with no brightness or colour still switches on the full Power-ON set — and a turn-on whose only setting is a transition counts as a plain turn-on.
-- **The group's light list always shows all base lights** (in its `entity_id` attribute). One template exception: `expand()` does not expand Asymmetric Groups — see *Good to know* below. Extra attributes (`effective_power_on_members`, `effective_power_off_members`, `effective_attribute_members`, `effective_state_members`) show which sets are currently in effect.
+- **Changing brightness or colour touches only the Attribute lights:**
+  - An Attribute light that is also in the Power-ON set and is off is switched on with the new values — switching a light on this way takes membership in both sets.
+  - An Attribute light that is already on is adjusted in place, whether or not it is in the Power-ON set.
+  - A Power-ON light that is *not* in the Attribute set is left completely alone — off stays off, on keeps its level.
+  - A turn-on with no brightness or colour still switches on the full Power-ON set, and a turn-on whose only setting is a transition counts as a plain turn-on.
+- **The group's light list always shows all base lights** (in its `entity_id` attribute). Extra attributes (`effective_power_on_members`, `effective_power_off_members`, `effective_attribute_members`, `effective_state_members`) show which sets are currently in effect.
 
 A member can itself be a light group — a regular group or another Asymmetric Group. Like core groups, a group member is **atomic**: it sits in each set as a single member, is switched on/off and given attributes as one entity, and contributes its own combined state to the group's state and its own brightness to the reported brightness, each through the relevant set. Membership of the subgroup is edited in one place — its own helper — and every group containing it follows. The one arrangement that's rejected is a cycle: a group containing itself, directly or through another group.
 
@@ -71,8 +75,6 @@ A member can itself be a light group — a regular group or another Asymmetric G
 - A light that is in neither the old nor the new set (turned on by hand) is left alone, and doesn't count as the group being lit.
 
 This happens when you flip the Asymmetric power switch, edit the sets, apply a preset, or call `set_members` — never on startup. The change waits until the affected lights have actually switched (up to 10 seconds), so automations that use it at the start of a scene run in order. A light that is already offline is skipped silently; a light whose new state can't be confirmed is dropped from the wait and named once in the log.
-
-Example: a "Movie night" scene narrows the group to one lamp. With enforcement on, the room's other lit lights switch off as the scene starts, instead of staying on until the next turn-off.
 
 ## Controlling groups from automations
 
@@ -142,7 +144,7 @@ What happens:
 ## Good to know
 
 - Only calls made **to the group itself** are affected. Anything that addresses the lights directly — an area or label target, a scene, or another integration — works exactly as before.
-- If a behaviour's lights are all off while the group is on for another reason (say, the group is on because a State light is on, but no Attribute light is), the group reports its colour and brightness from whichever lights are actually on, so dashboards always show sensible values.
+- The brightness and colour the group reports fall back to whichever base lights are lit when no Attribute light is on (see *How it works*), so dashboards always show sensible values.
 - Switching a behaviour on or off can change the group's reported on/off state without any light changing — for example, turning *Asymmetric state* off when a hand-lit lamp is on suddenly counts that lamp. That's inherent to choosing which lights define the state.
 - **Templates: `expand()` does not expand an Asymmetric Group.** Home Assistant's `expand()` only recognises groups created with the core Group integration, so `expand(light.my_group)` returns the group itself instead of its lights. Read the members from the attribute instead — `expand(state_attr('light.my_group', 'entity_id'))` — and if the group sits inside a regular group, apply the same step once more to anything in the result that still has an `entity_id` attribute. Targeting the group in service calls is unaffected.
 - A group's current settings survive restarts. Editing the group under **Configure** resets it to the configured sets, discarding changes made by presets or `set_members` since — the Configure page is the starting point after every edit.

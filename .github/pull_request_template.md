@@ -4,6 +4,9 @@
 
 ## Checklist
 
-- [ ] Tests pass locally (`python -m unittest discover -s tests`, plus the HA-level tests if touched)
+- [ ] Unit tests pass (`python -m unittest discover -s tests`)
+- [ ] HA-level tests pass (`pip install -r requirements_test.txt`, then `python -m pytest tests/`)
+- [ ] Lint passes (`ruff check`)
 - [ ] README updated if behaviour, services, or setup changed
-- [ ] No new member-set behaviour without engine tests covering it
+- [ ] If `strings.json` changed, `translations/en.json` was edited identically
+- [ ] Tests cover any behaviour change
