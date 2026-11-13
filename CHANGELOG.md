@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-11-12
+
+### Fixed
+
+- The setup and options screens now explain Enforce power scope and
+  Hide members where their switches are chosen, instead of showing
+  bare labels.
+- The attribute member step no longer implies that an already-on
+  light outside the Power-ON set is left alone by attribute
+  changes — it is adjusted, and the text now says so.
+- The option that counts the group's state lights is labelled
+  "All state lights on"; the member-count wording in the setup
+  screens, the README, and the service descriptions is aligned.
+- Saving a group's options when a member group has been edited to
+  include it now explains that the loop must be broken in the
+  member group, instead of asking for a member removal this
+  screen doesn't offer.
+- Service descriptions are clearer: preset names must match
+  exactly, and saving a preset fails on a duplicate name when
+  overwrite is off.
+
+### Changed
+
+- Documentation tidy-up: the README's attribute guarantees are
+  split into short bullets, contributor templates ask for the
+  group's effective sets in bug reports, and blank issues are
+  disabled so reports use the form.
+
 ## [1.0.0] - 2026-11-12
 
 First release.
