@@ -377,7 +377,7 @@ class AsymmetricGroupOptionsFlow(OptionsFlow):
             return self.async_show_form(
                 step_id="members",
                 data_schema=_toggles_schema(self._working),
-                errors={"base": "group_member_cycle"},
+                errors={"base": "group_member_cycle_options"},
             )
         return await self._route_next("")
 

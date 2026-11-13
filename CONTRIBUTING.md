@@ -41,9 +41,8 @@ python -m pytest tests/
 The pin in `requirements_test.txt` selects the Home Assistant version
 under test. The minimum supported Home Assistant version is 2024.5.0
 (see `hacs.json`), and the full test suite is verified against it.
-On 2024.4.4 the config-flow tests pass, but nested groups do not
-follow a subgroup's state there (member state-change propagation
-behaves differently), which is why the floor is 2024.5.0.
+The floor is 2024.5.0: nested-group member state propagation
+behaves differently on 2024.4.x.
 
 CI (`.github/workflows/validate.yaml`) runs the unit tests, the
 HA-level tests, lint (ruff), the HACS action, and hassfest on every
@@ -60,8 +59,8 @@ push — please make sure your change keeps all of them green.
 
 Changes land on `main` only through pull requests. The default branch is
 protected: force-pushes and branch deletion are blocked, and the CI checks
-(Tests, HA-level tests, HACS validation, Hassfest validation) must pass
-before a pull request can merge.
+(Tests, HA-level tests, Lint, HACS validation, Hassfest validation) must
+pass before a pull request can merge.
 
 ## AI involvement
 

@@ -69,13 +69,13 @@ set_members:
       required: false
       selector:
         boolean:
-    enforce_power_scope:
-      required: false
-      selector:
-        boolean:
     state_members:
       required: false
       selector:
         entity:
           domain: light
           multiple: true
+    enforce_power_scope:
+      required: false
+      selector:
+        boolean:

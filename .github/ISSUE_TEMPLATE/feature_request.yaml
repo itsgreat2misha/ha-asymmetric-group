@@ -11,6 +11,13 @@ body:
     validations:
       required: true
   - type: textarea
+    id: example
+    attributes:
+      label: Example / your setup (optional)
+      placeholder: Your lights, the sets you'd want, and what should happen — an example makes the request much easier to judge.
+    validations:
+      required: false
+  - type: textarea
     id: workaround
     attributes:
       label: Current workaround (if any)

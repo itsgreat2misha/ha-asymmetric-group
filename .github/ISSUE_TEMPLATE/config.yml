@@ -1,5 +1,5 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
 contact_links:
   - name: Home Assistant community forum
     url: https://community.home-assistant.io/
-    about: For setup help and usage questions, the community forum usually answers faster.
+    about: For setup help and usage questions, try the community forum.
