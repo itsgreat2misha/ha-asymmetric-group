@@ -30,8 +30,9 @@ body:
       label: Group setup
       description: |
         The group's switch positions (Asymmetric power / attributes / state, Enforce power scope)
-        and the set currently in effect — the group's effective_power_on_members,
-        effective_attribute_members and effective_state_members attributes (visible in
+        and the sets currently in effect — the group's effective_power_on_members,
+        effective_power_off_members, effective_attribute_members and
+        effective_state_members attributes (visible in
         Developer tools → States). Also say how the command was sent: voice, dashboard,
         automation, or a service call.
       placeholder: "e.g. Asymmetric power on, Power-ON = [light.a], effective_power_on_members = [light.a]; command sent from a dashboard button"

@@ -28,7 +28,7 @@
           "enforce_power_scope": "Enforce power scope",
           "hide_members": "Hide members"
         },
-        "description": "These switches set the starting state of the group's own switches. Enforce power scope: when the Power-ON set changes, lights that dropped out are switched off right away, and lights that joined are switched on right away if the group was lit. Hide members: hide the member lights and show only the group, like a regular group. Each behaviour you switch on gets its own member-set step next; behaviours left off use the full base set.",
+        "description": "These switches set the starting state of the group's own switches. Enforce power scope: when the Power-ON set changes, lights that dropped out are switched off right away, and lights that joined are switched on right away, but only if a light from the old Power-ON set is on. Hide members: hide the member lights and show only the group, like a regular group. Each behaviour you switch on gets its own member-set step next; behaviours left off use the full base set.",
         "title": "Defaults and options"
       },
       "state": {
@@ -87,7 +87,7 @@
           "enforce_power_scope": "Enforce power scope",
           "hide_members": "Hide members"
         },
-        "description": "Saving applies these settings to the group right away, replacing any changes made by presets or automations since. Each behaviour you switch on gets its own member-set step next.",
+        "description": "Saving applies these settings to the group right away, replacing any changes made by presets or set_members since. Enforce power scope: when the Power-ON set changes, lights that dropped out are switched off right away, and lights that joined are switched on right away, but only if a light from the old Power-ON set is on. Hide members: hide the member lights and show only the group, like a regular group. Each behaviour you switch on gets its own member-set step next; behaviours left off use the full base set.",
         "title": "Defaults and options"
       },
       "members_attributes": {
@@ -178,7 +178,7 @@
           "name": "Overwrite"
         },
         "preset": {
-          "description": "Name to save the preset under.",
+          "description": "Name to save the preset under. To replace an existing preset the name must match exactly — see the names with the asymmetric_group.list_presets service, or in a group's Configure → Preset library editor.",
           "name": "Preset"
         }
       },
@@ -189,7 +189,7 @@
       "description": "Return the full preset library (names and contents) as a service response. Use it in scripts and automations with a response_variable."
     },
     "set_members": {
-      "name": "Set toggles and member sets",
+      "name": "Set switches and member sets",
       "description": "Change a group's switches and member sets directly. Only the fields you pass are changed; everything else is left as it is. Member lists are limited to the group's base members. If the group's members already form a cycle — the group containing itself, directly or through a member group — the call is refused; break the cycle by editing the member group that loops back.",
       "fields": {
         "entity_id": {
