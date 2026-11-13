@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-11-13
+
+### Added
+
+- Base members can now be edited after creation under the group's
+  **Configure** button (core-group parity; previously they were
+  fixed at creation, and changing them meant deleting and
+  recreating the helper). The members form now opens with the base
+  members alongside the switches. When the base set changes, a set
+  that still lists the whole base set follows it, and narrowed sets
+  are filtered to the new base; a member removed from the base that
+  the group had hidden is shown again. Editing the base never
+  switches any lights — like every Configure edit it reseeds the
+  group and takes effect from the next command. The group's name
+  remains fixed at creation, as in core groups.
+
 ## [1.0.4] - 2026-11-13
 
 ### Fixed
