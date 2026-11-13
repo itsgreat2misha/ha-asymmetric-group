@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-11-12
+
+### Changed
+
+- Documentation: the README's behaviour rules are presented as a
+  "Behaviour at a glance" matrix covering turn on, turn off,
+  reported state, and brightness/colour changes; the worked
+  example is replaced by a brief Examples section with one short
+  scenario per feature; and the uninstall steps explain why the
+  helpers are deleted while the integration is still installed.
+
 ## [1.0.1] - 2026-11-12
 
 ### Fixed
