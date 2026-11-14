@@ -39,7 +39,12 @@ except ImportError:
     ) from None
 
 from custom_components.asymmetric_group import engine
-from custom_components.asymmetric_group.config_flow import _creates_cycle
+from custom_components.asymmetric_group.config_flow import (
+    SECTION_ATTRIBUTES,
+    SECTION_POWER,
+    SECTION_STATE,
+    _creates_cycle,
+)
 from custom_components.asymmetric_group.const import (
     CONF_ALL_ENTITIES,
     CONF_ASYMMETRIC_ATTRIBUTES,
@@ -424,8 +429,29 @@ async def test_options_flow_rejects_cycle_formed_after_creation(
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "members"
 
+    # Full members submit in the sectioned shape the UI sends:
+    # behaviour fields nested under their form sections.
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], TOGGLES_OFF
+        result["flow_id"],
+        {
+            CONF_BASE_MEMBERS: ["light.inner_group"],
+            SECTION_POWER: {
+                CONF_ASYMMETRIC_POWER: False,
+                CONF_POWER_ON_MEMBERS: ["light.inner_group"],
+                CONF_POWER_OFF_MEMBERS: ["light.inner_group"],
+            },
+            SECTION_ATTRIBUTES: {
+                CONF_ASYMMETRIC_ATTRIBUTES: False,
+                CONF_ATTRIBUTE_MEMBERS: ["light.inner_group"],
+            },
+            SECTION_STATE: {
+                CONF_ASYMMETRIC_STATE: False,
+                CONF_STATE_MEMBERS: ["light.inner_group"],
+                CONF_ALL_ENTITIES: False,
+            },
+            CONF_ENFORCE_POWER_SCOPE: False,
+            CONF_HIDE_MEMBERS: False,
+        },
     )
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "members"

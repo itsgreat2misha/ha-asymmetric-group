@@ -39,10 +39,11 @@ python -m pytest tests/
 ```
 
 The pin in `requirements_test.txt` selects the Home Assistant version
-under test. The minimum supported Home Assistant version is 2024.5.0
+under test. The minimum supported Home Assistant version is 2024.7.0
 (see `hacs.json`), and the full test suite is verified against it.
-The floor is 2024.5.0: nested-group member state propagation
-behaves differently on 2024.4.x.
+The floor is 2024.7.0: the Configure form groups each behaviour in
+a form section, and `homeassistant.data_entry_flow.section` only
+exists from 2024.7.0.
 
 CI (`.github/workflows/validate.yaml`) runs the unit tests, the
 HA-level tests, lint (ruff), the HACS action, and hassfest on every
