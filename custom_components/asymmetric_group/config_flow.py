@@ -25,10 +25,12 @@ The options flow differs: "members" is a single form holding the
 base members, every toggle, and every member set at once (base
 members ARE editable here — a set that still tracks the base set
 follows it when it changes, a narrowed set is filtered to it).
-Each behaviour's toggle sits directly above the pickers it
-governs, preset-editor style; a set whose behaviour is off is
-stored but inert. "presets" opens the global preset library
-editor.
+Each behaviour lives in its own form section — its toggle first,
+then the pickers it governs — so the frontend's field spacing
+cannot visually detach a toggle from its sets; a set whose
+behaviour is off is stored but inert. Section fields arrive
+nested under the section id and are flattened on submit.
+"presets" opens the global preset library editor.
 """
 
 from __future__ import annotations
@@ -36,6 +38,7 @@ from __future__ import annotations
 import voluptuous as vol
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import section
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import (
     BooleanSelector,
@@ -169,14 +172,47 @@ def _toggles_schema(defaults: dict) -> vol.Schema:
     )
 
 
+# Section ids of the options "members" form: one section per
+# behaviour, named in strings.json under the step's "sections".
+SECTION_POWER = "power"
+SECTION_ATTRIBUTES = "attributes"
+SECTION_STATE = "state"
+
+_MEMBER_SECTIONS = (SECTION_POWER, SECTION_ATTRIBUTES, SECTION_STATE)
+
+
+def _flatten_members_input(user_input: dict) -> dict:
+    """Flatten a sectioned members submit to the flat field dict.
+
+    Fields inside a form section arrive nested under the section
+    id; the rest of the form (base members, Enforce power scope,
+    Hide members) is already top level. Non-section input passes
+    through unchanged.
+    """
+    flat = {
+        key: value
+        for key, value in user_input.items()
+        if key not in _MEMBER_SECTIONS
+    }
+    for section_id in _MEMBER_SECTIONS:
+        nested = user_input.get(section_id)
+        if isinstance(nested, dict):
+            flat.update(nested)
+    return flat
+
+
 def _options_members_schema(defaults: dict) -> vol.Schema:
     """Options "members" form: the whole Configure page in one form.
 
-    Field order is the preset-editor pattern — each behaviour's
-    toggle sits directly above the member pickers it governs, and
-    every picker is always shown (a set whose behaviour is off is
-    stored but inert). Pickers are pre-filled from the group's
-    current sets, falling back to the base set.
+    Base members sit at the top, outside any section. Each
+    behaviour then gets its own form section holding its toggle
+    first and the member pickers it governs below it, so the
+    toggle and its sets stay visually grouped however the
+    frontend spaces the fields. Enforce power scope and Hide
+    members close the form, again outside sections. Every picker
+    is always shown (a set whose behaviour is off is stored but
+    inert) and pre-filled from the group's current sets, falling
+    back to the base set.
     """
     base = list(defaults.get(CONF_BASE_MEMBERS) or [])
 
@@ -192,18 +228,30 @@ def _options_members_schema(defaults: dict) -> vol.Schema:
             _light_selector(),
         )
 
+    def _section(*pairs: tuple[vol.Required, object]) -> section:
+        return section(
+            vol.Schema(dict(pairs)),
+            {"collapsed": False},
+        )
+
     fields: dict = {
         vol.Required(CONF_BASE_MEMBERS, default=base): _light_selector(),
+        vol.Required(SECTION_POWER): _section(
+            _bool(CONF_ASYMMETRIC_POWER),
+            _members(CONF_POWER_ON_MEMBERS),
+            _members(CONF_POWER_OFF_MEMBERS),
+        ),
+        vol.Required(SECTION_ATTRIBUTES): _section(
+            _bool(CONF_ASYMMETRIC_ATTRIBUTES),
+            _members(CONF_ATTRIBUTE_MEMBERS),
+        ),
+        vol.Required(SECTION_STATE): _section(
+            _bool(CONF_ASYMMETRIC_STATE),
+            _members(CONF_STATE_MEMBERS),
+            _bool(CONF_ALL_ENTITIES),
+        ),
     }
     for key, selector in (
-        _bool(CONF_ASYMMETRIC_POWER),
-        _members(CONF_POWER_ON_MEMBERS),
-        _members(CONF_POWER_OFF_MEMBERS),
-        _bool(CONF_ASYMMETRIC_ATTRIBUTES),
-        _members(CONF_ATTRIBUTE_MEMBERS),
-        _bool(CONF_ASYMMETRIC_STATE),
-        _members(CONF_STATE_MEMBERS),
-        _bool(CONF_ALL_ENTITIES),
         _bool(CONF_ENFORCE_POWER_SCOPE),
         _bool(CONF_HIDE_MEMBERS),
     ):
@@ -413,7 +461,10 @@ class AsymmetricGroupOptionsFlow(OptionsFlow):
                 step_id="members",
                 data_schema=_options_members_schema(self._working),
             )
-        self._working.update(user_input)
+        # Section fields arrive nested under their section ids;
+        # flatten before validation and saving so the stored
+        # config keeps its flat shape.
+        self._working.update(_flatten_members_input(user_input))
         new_base = list(self._working.get(CONF_BASE_MEMBERS) or [])
         if not new_base:
             return self.async_show_form(

@@ -20,7 +20,7 @@ On Home Assistant before 2026.11, the Marketplace is called HACS — the steps a
 2. Install **Asymmetric Group** from the Marketplace and restart Home Assistant.
 3. Go to **Settings → Devices & services → Helpers → Create helper → Asymmetric Group**.
 
-Requires Home Assistant 2024.5.0 or newer.
+Requires Home Assistant 2024.7.0 or newer.
 
 ## Upgrading
 
@@ -146,7 +146,7 @@ Light sets in a preset are matched against each group's own base lights when app
 
 ## Troubleshooting
 
-- **The helper doesn't appear under Create helper.** The integration isn't loaded: confirm the Marketplace install finished, restart Home Assistant, and check **Settings → System → Logs** for `asymmetric_group` errors. The Marketplace also hides integrations from Home Assistant versions older than the minimum in `hacs.json` (2024.5.0).
+- **The helper doesn't appear under Create helper.** The integration isn't loaded: confirm the Marketplace install finished, restart Home Assistant, and check **Settings → System → Logs** for `asymmetric_group` errors. The Marketplace also hides integrations from Home Assistant versions older than the minimum in `hacs.json` (2024.7.0).
 - **A group light is missing or unavailable after editing members.** Editing a group under **Configure** reloads it. If a member light was renamed or removed, re-open **Configure** and re-pick the member sets — member lists are filtered to the group's base members, so a removed light drops out of the sets. Until then the group may show as unknown.
 - **Turning the group on lit fewer lights than expected.** That's the feature, most likely: check the group's **Asymmetric power** switch — while it is on, turn-on uses only the Power-ON set. The group's `effective_power_on_members` attribute shows the set currently in effect.
 - **The group shows "on" while its lights look off (or the reverse).** Check the **Asymmetric state** switch and the `effective_state_members` attribute: while the switch is on, only the State set decides the group's state.

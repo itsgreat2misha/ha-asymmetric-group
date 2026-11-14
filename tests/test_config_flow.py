@@ -15,7 +15,7 @@ try:
     from homeassistant.config_entries import ConfigEntryState
     from homeassistant.const import EVENT_CALL_SERVICE
     from homeassistant.core import HomeAssistant, callback
-    from homeassistant.data_entry_flow import FlowResultType
+    from homeassistant.data_entry_flow import FlowResultType, section
     from homeassistant.helpers import entity_registry as er
     from pytest_homeassistant_custom_component.common import MockConfigEntry
 except ImportError:
@@ -27,6 +27,11 @@ except ImportError:
         "pytest-homeassistant-custom-component is not installed"
     ) from None
 
+from custom_components.asymmetric_group.config_flow import (
+    SECTION_ATTRIBUTES,
+    SECTION_POWER,
+    SECTION_STATE,
+)
 from custom_components.asymmetric_group.const import (
     CONF_ALL_ENTITIES,
     CONF_ASYMMETRIC_ATTRIBUTES,
@@ -73,9 +78,11 @@ def _entry_data(**overrides):
 
 def _members_payload(**overrides):
     """Full single-form Configure payload, as the UI submits it:
-    base, all six toggles, and all four member sets in one submit.
-    Sets default to the full base set (their pre-filled value)."""
-    payload = {
+    base members, Enforce and Hide at the top level, and each
+    behaviour's toggle + member sets nested under its form
+    section, all in one submit. Sets default to the full base set
+    (their pre-filled value). Overrides are flat field names."""
+    flat = {
         **TOGGLES_OFF,
         CONF_BASE_MEMBERS: list(MEMBERS),
         CONF_POWER_ON_MEMBERS: list(MEMBERS),
@@ -83,8 +90,26 @@ def _members_payload(**overrides):
         CONF_ATTRIBUTE_MEMBERS: list(MEMBERS),
         CONF_STATE_MEMBERS: list(MEMBERS),
     }
-    payload.update(overrides)
-    return payload
+    flat.update(overrides)
+    return {
+        CONF_BASE_MEMBERS: flat[CONF_BASE_MEMBERS],
+        SECTION_POWER: {
+            CONF_ASYMMETRIC_POWER: flat[CONF_ASYMMETRIC_POWER],
+            CONF_POWER_ON_MEMBERS: flat[CONF_POWER_ON_MEMBERS],
+            CONF_POWER_OFF_MEMBERS: flat[CONF_POWER_OFF_MEMBERS],
+        },
+        SECTION_ATTRIBUTES: {
+            CONF_ASYMMETRIC_ATTRIBUTES: flat[CONF_ASYMMETRIC_ATTRIBUTES],
+            CONF_ATTRIBUTE_MEMBERS: flat[CONF_ATTRIBUTE_MEMBERS],
+        },
+        SECTION_STATE: {
+            CONF_ASYMMETRIC_STATE: flat[CONF_ASYMMETRIC_STATE],
+            CONF_STATE_MEMBERS: flat[CONF_STATE_MEMBERS],
+            CONF_ALL_ENTITIES: flat[CONF_ALL_ENTITIES],
+        },
+        CONF_ENFORCE_POWER_SCOPE: flat[CONF_ENFORCE_POWER_SCOPE],
+        CONF_HIDE_MEMBERS: flat[CONF_HIDE_MEMBERS],
+    }
 
 
 async def test_flow_creates_entry_with_all_dimensions_off(
@@ -183,8 +208,8 @@ async def test_flow_accepts_group_entities_as_members(
 async def test_options_flow_members_round_trip(hass: HomeAssistant) -> None:
     """Options flow opens as a menu and saves member settings in
     one submit: the members form is the only members step and it
-    carries all 11 fields — base, then each behaviour's toggle
-    directly above the pickers it governs."""
+    carries all 11 fields — base at the top level, then each
+    behaviour's toggle and pickers grouped in a form section."""
     entry = MockConfigEntry(domain=DOMAIN, title="Test Group", data=_entry_data())
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
@@ -199,19 +224,40 @@ async def test_options_flow_members_round_trip(hass: HomeAssistant) -> None:
     )
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "members"
-    assert [key.schema for key in result["data_schema"].schema] == [
+    # The form is sectioned: base members at the top level, then
+    # one section per behaviour, then Enforce and Hide.
+    schema = result["data_schema"].schema
+    assert [key.schema for key in schema] == [
         CONF_BASE_MEMBERS,
-        CONF_ASYMMETRIC_POWER,
-        CONF_POWER_ON_MEMBERS,
-        CONF_POWER_OFF_MEMBERS,
-        CONF_ASYMMETRIC_ATTRIBUTES,
-        CONF_ATTRIBUTE_MEMBERS,
-        CONF_ASYMMETRIC_STATE,
-        CONF_STATE_MEMBERS,
-        CONF_ALL_ENTITIES,
+        SECTION_POWER,
+        SECTION_ATTRIBUTES,
+        SECTION_STATE,
         CONF_ENFORCE_POWER_SCOPE,
         CONF_HIDE_MEMBERS,
     ]
+    # Inside each section the behaviour's toggle comes first,
+    # followed by the member pickers it governs.
+    section_fields = {
+        key.schema: [inner.schema for inner in value.schema.schema]
+        for key, value in schema.items()
+        if isinstance(value, section)
+    }
+    assert section_fields == {
+        SECTION_POWER: [
+            CONF_ASYMMETRIC_POWER,
+            CONF_POWER_ON_MEMBERS,
+            CONF_POWER_OFF_MEMBERS,
+        ],
+        SECTION_ATTRIBUTES: [
+            CONF_ASYMMETRIC_ATTRIBUTES,
+            CONF_ATTRIBUTE_MEMBERS,
+        ],
+        SECTION_STATE: [
+            CONF_ASYMMETRIC_STATE,
+            CONF_STATE_MEMBERS,
+            CONF_ALL_ENTITIES,
+        ],
+    }
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],

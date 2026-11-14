@@ -79,17 +79,34 @@
       },
       "members": {
         "data": {
-          "all_entities": "All state lights on (group is on only if all of them are on)",
-          "asymmetric_attributes": "Asymmetric attributes",
-          "asymmetric_power": "Asymmetric power",
-          "asymmetric_state": "Asymmetric state",
-          "attribute_members": "Attribute members",
           "base_members": "Base members",
           "enforce_power_scope": "Enforce power scope",
-          "hide_members": "Hide members",
-          "power_off_members": "Power-OFF members",
-          "power_on_members": "Power-ON members",
-          "state_members": "State members"
+          "hide_members": "Hide members"
+        },
+        "sections": {
+          "attributes": {
+            "data": {
+              "asymmetric_attributes": "Asymmetric attributes",
+              "attribute_members": "Attribute members"
+            },
+            "name": "Attributes"
+          },
+          "power": {
+            "data": {
+              "asymmetric_power": "Asymmetric power",
+              "power_off_members": "Power-OFF members",
+              "power_on_members": "Power-ON members"
+            },
+            "name": "Power"
+          },
+          "state": {
+            "data": {
+              "all_entities": "All state lights on (group is on only if all of them are on)",
+              "asymmetric_state": "Asymmetric state",
+              "state_members": "State members"
+            },
+            "name": "State"
+          }
         },
         "title": "Defaults and options"
       },
