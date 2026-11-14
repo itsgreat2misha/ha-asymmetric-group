@@ -170,6 +170,10 @@ Nothing changes on any group. Applying a preset copies its settings into the gro
 **Can I create or delete groups from automations?**
 Groups themselves are created in the UI like other helpers. Its switches, its light sets, and presets are controllable from automations and scripts.
 
+## AI involvement
+
+This project is developed with AI-agent assistance: the owner sets the design and reviews every change, and the code, tests, and documentation are written and verified with an AI agent in the loop. Nothing merges unreviewed, and every release is installed and exercised on the owner's own Home Assistant before it is tagged. See [CONTRIBUTING](CONTRIBUTING.md) for how contributions are handled.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
