@@ -71,6 +71,22 @@ def _entry_data(**overrides):
     return data
 
 
+def _members_payload(**overrides):
+    """Full single-form Configure payload, as the UI submits it:
+    base, all six toggles, and all four member sets in one submit.
+    Sets default to the full base set (their pre-filled value)."""
+    payload = {
+        **TOGGLES_OFF,
+        CONF_BASE_MEMBERS: list(MEMBERS),
+        CONF_POWER_ON_MEMBERS: list(MEMBERS),
+        CONF_POWER_OFF_MEMBERS: list(MEMBERS),
+        CONF_ATTRIBUTE_MEMBERS: list(MEMBERS),
+        CONF_STATE_MEMBERS: list(MEMBERS),
+    }
+    payload.update(overrides)
+    return payload
+
+
 async def test_flow_creates_entry_with_all_dimensions_off(
     hass: HomeAssistant,
 ) -> None:
@@ -165,7 +181,10 @@ async def test_flow_accepts_group_entities_as_members(
 
 
 async def test_options_flow_members_round_trip(hass: HomeAssistant) -> None:
-    """Options flow opens as a menu and saves member settings."""
+    """Options flow opens as a menu and saves member settings in
+    one submit: the members form is the only members step and it
+    carries all 11 fields — base, then each behaviour's toggle
+    directly above the pickers it governs."""
     entry = MockConfigEntry(domain=DOMAIN, title="Test Group", data=_entry_data())
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
@@ -180,17 +199,30 @@ async def test_options_flow_members_round_trip(hass: HomeAssistant) -> None:
     )
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "members"
+    assert [key.schema for key in result["data_schema"].schema] == [
+        CONF_BASE_MEMBERS,
+        CONF_ASYMMETRIC_POWER,
+        CONF_POWER_ON_MEMBERS,
+        CONF_POWER_OFF_MEMBERS,
+        CONF_ASYMMETRIC_ATTRIBUTES,
+        CONF_ATTRIBUTE_MEMBERS,
+        CONF_ASYMMETRIC_STATE,
+        CONF_STATE_MEMBERS,
+        CONF_ALL_ENTITIES,
+        CONF_ENFORCE_POWER_SCOPE,
+        CONF_HIDE_MEMBERS,
+    ]
 
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {**TOGGLES_OFF, CONF_ASYMMETRIC_STATE: True}
+        result["flow_id"],
+        _members_payload(
+            **{
+                CONF_ASYMMETRIC_STATE: True,
+                CONF_STATE_MEMBERS: ["light.bedroom_2"],
+            }
+        ),
     )
-    # Asymmetric state on -> the state member step is shown.
-    assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == "members_state"
-
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {CONF_STATE_MEMBERS: ["light.bedroom_2"]}
-    )
+    # One submit finishes the flow — no per-behaviour steps follow.
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_ASYMMETRIC_STATE] is True
     assert result["data"][CONF_STATE_MEMBERS] == ["light.bedroom_2"]
@@ -199,6 +231,30 @@ async def test_options_flow_members_round_trip(hass: HomeAssistant) -> None:
     await hass.async_block_till_done()
     assert entry.options[CONF_STATE_MEMBERS] == ["light.bedroom_2"]
     assert entry.state == ConfigEntryState.LOADED
+
+
+async def test_options_set_for_disabled_behaviour_is_stored(
+    hass: HomeAssistant,
+) -> None:
+    """A set submitted while its behaviour toggle is off is saved
+    verbatim; it stays inert (the effective set remains the full
+    base set) until the behaviour is switched on."""
+    entry = await _setup_entry(hass, _entry_data())
+    result = await _open_members_step(hass, entry)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        _members_payload(**{CONF_ATTRIBUTE_MEMBERS: ["light.bedroom_2"]}),
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_ASYMMETRIC_ATTRIBUTES] is False
+    assert result["data"][CONF_ATTRIBUTE_MEMBERS] == ["light.bedroom_2"]
+
+    await hass.async_block_till_done()
+    assert entry.options[CONF_ATTRIBUTE_MEMBERS] == ["light.bedroom_2"]
+    group = hass.states.get("light.test_group")
+    assert group is not None
+    # Inert while off: attribute behaviour still resolves to base.
+    assert group.attributes["effective_attribute_members"] == MEMBERS
 
 
 async def test_options_preset_picker_shows_human_label_for_new_preset(
@@ -371,7 +427,7 @@ async def test_options_add_base_member(hass: HomeAssistant) -> None:
     result = await _open_members_step(hass, entry)
     new_base = [*MEMBERS, "light.bedroom_4"]
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {**TOGGLES_OFF, CONF_BASE_MEMBERS: new_base}
+        result["flow_id"], _members_payload(**{CONF_BASE_MEMBERS: new_base})
     )
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_BASE_MEMBERS] == new_base
@@ -402,20 +458,16 @@ async def test_options_remove_base_member_filters_subgroups(
     result = await _open_members_step(hass, entry)
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        {
-            **TOGGLES_OFF,
-            CONF_ASYMMETRIC_POWER: True,
-            CONF_BASE_MEMBERS: kept,
-        },
-    )
-    assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == "members_power"
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"],
-        {
-            CONF_POWER_ON_MEMBERS: ["light.bedroom_1"],
-            CONF_POWER_OFF_MEMBERS: MEMBERS,
-        },
+        _members_payload(
+            **{
+                CONF_ASYMMETRIC_POWER: True,
+                CONF_BASE_MEMBERS: kept,
+                CONF_POWER_ON_MEMBERS: ["light.bedroom_1"],
+                # The other sets are submitted at their pre-filled
+                # value — the whole old base — so they follow.
+                CONF_POWER_OFF_MEMBERS: MEMBERS,
+            }
+        ),
     )
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_POWER_ON_MEMBERS] == ["light.bedroom_1"]
@@ -483,11 +535,16 @@ async def test_options_removed_member_hidden_by_group_is_unhidden(
     result = await _open_members_step(hass, entry)
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        {
-            **TOGGLES_OFF,
-            CONF_HIDE_MEMBERS: True,
-            CONF_BASE_MEMBERS: [kept.entity_id],
-        },
+        _members_payload(
+            **{
+                CONF_HIDE_MEMBERS: True,
+                CONF_BASE_MEMBERS: [kept.entity_id],
+                CONF_POWER_ON_MEMBERS: members,
+                CONF_POWER_OFF_MEMBERS: members,
+                CONF_ATTRIBUTE_MEMBERS: members,
+                CONF_STATE_MEMBERS: members,
+            }
+        ),
     )
     assert result["type"] == FlowResultType.CREATE_ENTRY
     await hass.async_block_till_done()
@@ -513,7 +570,9 @@ async def test_options_base_edit_creating_cycle_is_rejected(
     result = await _open_members_step(hass, entry)
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        {**TOGGLES_OFF, CONF_BASE_MEMBERS: [*MEMBERS, "light.test_group"]},
+        _members_payload(
+            **{CONF_BASE_MEMBERS: [*MEMBERS, "light.test_group"]}
+        ),
     )
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "members"
@@ -538,7 +597,15 @@ async def test_options_base_change_rebases_tracking_sets_only(
     new_base = ["light.bedroom_1", "light.bedroom_2", "light.bedroom_4"]
     result = await _open_members_step(hass, entry)
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {**TOGGLES_OFF, CONF_BASE_MEMBERS: new_base}
+        result["flow_id"],
+        _members_payload(
+            **{
+                CONF_BASE_MEMBERS: new_base,
+                # Pre-filled narrowed sets are submitted as shown.
+                CONF_POWER_ON_MEMBERS: ["light.bedroom_1", "light.bedroom_2"],
+                CONF_STATE_MEMBERS: ["light.bedroom_1"],
+            }
+        ),
     )
     assert result["type"] == FlowResultType.CREATE_ENTRY
     data = result["data"]
@@ -570,20 +637,14 @@ async def test_options_added_member_joins_tracking_sets_only(
     result = await _open_members_step(hass, entry)
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        {
-            **TOGGLES_OFF,
-            CONF_ASYMMETRIC_POWER: True,
-            CONF_BASE_MEMBERS: new_base,
-        },
-    )
-    assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == "members_power"
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"],
-        {
-            CONF_POWER_ON_MEMBERS: ["light.bedroom_1"],
-            CONF_POWER_OFF_MEMBERS: new_base,
-        },
+        _members_payload(
+            **{
+                CONF_ASYMMETRIC_POWER: True,
+                CONF_BASE_MEMBERS: new_base,
+                CONF_POWER_ON_MEMBERS: ["light.bedroom_1"],
+                CONF_POWER_OFF_MEMBERS: new_base,
+            }
+        ),
     )
     assert result["type"] == FlowResultType.CREATE_ENTRY
     await hass.async_block_till_done()
@@ -619,21 +680,17 @@ async def test_options_base_edit_does_not_enforce_but_set_members_does(
     result = await _open_members_step(hass, entry)
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        {
-            **TOGGLES_OFF,
-            CONF_ASYMMETRIC_POWER: True,
-            CONF_ENFORCE_POWER_SCOPE: True,
-            CONF_BASE_MEMBERS: ["light.bedroom_1", "light.bedroom_3"],
-        },
-    )
-    assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == "members_power"
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"],
-        {
-            CONF_POWER_ON_MEMBERS: ["light.bedroom_1", "light.bedroom_2"],
-            CONF_POWER_OFF_MEMBERS: ["light.bedroom_1", "light.bedroom_3"],
-        },
+        _members_payload(
+            **{
+                CONF_ASYMMETRIC_POWER: True,
+                CONF_ENFORCE_POWER_SCOPE: True,
+                CONF_BASE_MEMBERS: ["light.bedroom_1", "light.bedroom_3"],
+                # Submitted as pre-filled from the current config:
+                # the Power-ON set still lists the removed member.
+                CONF_POWER_ON_MEMBERS: ["light.bedroom_1", "light.bedroom_2"],
+                CONF_POWER_OFF_MEMBERS: ["light.bedroom_1", "light.bedroom_3"],
+            }
+        ),
     )
     assert result["type"] == FlowResultType.CREATE_ENTRY
     await hass.async_block_till_done()
@@ -700,7 +757,7 @@ async def test_options_empty_base_is_rejected(hass: HomeAssistant) -> None:
     entry = await _setup_entry(hass, _entry_data())
     result = await _open_members_step(hass, entry)
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {**TOGGLES_OFF, CONF_BASE_MEMBERS: []}
+        result["flow_id"], _members_payload(**{CONF_BASE_MEMBERS: []})
     )
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "members"

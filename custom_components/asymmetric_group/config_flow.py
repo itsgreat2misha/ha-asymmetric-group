@@ -21,12 +21,14 @@ group (its set resolves to base), and if it is switched on later from
 its companion switch before being configured here, its subgroup
 defaults to the full base set.
 
-The options flow mirrors this: "members" opens with the base
-members plus the toggles (base members ARE editable here — a set
-that still tracks the base set follows it when it changes, a
-narrowed set is filtered to it), then runs the same conditional
-chain (step ids members / members_power / members_attributes /
-members_state); "presets" opens the global preset library editor.
+The options flow differs: "members" is a single form holding the
+base members, every toggle, and every member set at once (base
+members ARE editable here — a set that still tracks the base set
+follows it when it changes, a narrowed set is filtered to it).
+Each behaviour's toggle sits directly above the pickers it
+governs, preset-editor style; a set whose behaviour is off is
+stored but inert. "presets" opens the global preset library
+editor.
 """
 
 from __future__ import annotations
@@ -168,15 +170,44 @@ def _toggles_schema(defaults: dict) -> vol.Schema:
 
 
 def _options_members_schema(defaults: dict) -> vol.Schema:
-    """Options "members" form: base members + the toggles in one
-    form, like core's single options form for groups."""
+    """Options "members" form: the whole Configure page in one form.
+
+    Field order is the preset-editor pattern — each behaviour's
+    toggle sits directly above the member pickers it governs, and
+    every picker is always shown (a set whose behaviour is off is
+    stored but inert). Pickers are pre-filled from the group's
+    current sets, falling back to the base set.
+    """
+    base = list(defaults.get(CONF_BASE_MEMBERS) or [])
+
+    def _bool(key: str) -> tuple[vol.Required, BooleanSelector]:
+        return (
+            vol.Required(key, default=bool(defaults.get(key, False))),
+            BooleanSelector(),
+        )
+
+    def _members(key: str) -> tuple[vol.Required, EntitySelector]:
+        return (
+            vol.Required(key, default=list(defaults.get(key) or base)),
+            _light_selector(),
+        )
+
     fields: dict = {
-        vol.Required(
-            CONF_BASE_MEMBERS,
-            default=list(defaults.get(CONF_BASE_MEMBERS) or []),
-        ): _light_selector(),
+        vol.Required(CONF_BASE_MEMBERS, default=base): _light_selector(),
     }
-    fields.update(_toggles_schema(defaults).schema)
+    for key, selector in (
+        _bool(CONF_ASYMMETRIC_POWER),
+        _members(CONF_POWER_ON_MEMBERS),
+        _members(CONF_POWER_OFF_MEMBERS),
+        _bool(CONF_ASYMMETRIC_ATTRIBUTES),
+        _members(CONF_ATTRIBUTE_MEMBERS),
+        _bool(CONF_ASYMMETRIC_STATE),
+        _members(CONF_STATE_MEMBERS),
+        _bool(CONF_ALL_ENTITIES),
+        _bool(CONF_ENFORCE_POWER_SCOPE),
+        _bool(CONF_HIDE_MEMBERS),
+    ):
+        fields[key] = selector
     return vol.Schema(fields)
 
 
@@ -343,7 +374,7 @@ class AsymmetricGroupConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class AsymmetricGroupOptionsFlow(OptionsFlow):
-    """Options: member sets (conditional chain) + preset editor."""
+    """Options: member sets (single form) + preset editor."""
 
     def __init__(self, config_entry) -> None:
         # The entry is also stored explicitly: current HA manages
@@ -366,7 +397,8 @@ class AsymmetricGroupOptionsFlow(OptionsFlow):
         )
 
     # ------------------------------------------------------------------
-    # Members: same conditional chain as the config flow.
+    # Members: one form with every set and toggle (see
+    # _options_members_schema for the field order).
     async def async_step_members(
         self, user_input: dict | None = None
     ) -> ConfigFlowResult:
@@ -403,51 +435,6 @@ class AsymmetricGroupOptionsFlow(OptionsFlow):
                 data_schema=_options_members_schema(self._working),
                 errors={CONF_BASE_MEMBERS: "group_member_cycle"},
             )
-        return await self._route_next("")
-
-    async def async_step_members_power(
-        self, user_input: dict | None = None
-    ) -> ConfigFlowResult:
-        if user_input is not None:
-            self._working.update(user_input)
-            return await self._route_next("power")
-        return self.async_show_form(
-            step_id="members_power",
-            data_schema=_power_schema(self._working),
-        )
-
-    async def async_step_members_attributes(
-        self, user_input: dict | None = None
-    ) -> ConfigFlowResult:
-        if user_input is not None:
-            self._working.update(user_input)
-            return await self._route_next("attributes")
-        return self.async_show_form(
-            step_id="members_attributes",
-            data_schema=_single_member_schema(CONF_ATTRIBUTE_MEMBERS, self._working),
-        )
-
-    async def async_step_members_state(
-        self, user_input: dict | None = None
-    ) -> ConfigFlowResult:
-        if user_input is not None:
-            self._working.update(user_input)
-            return await self._finish_members()
-        return self.async_show_form(
-            step_id="members_state",
-            data_schema=_single_member_schema(CONF_STATE_MEMBERS, self._working),
-        )
-
-    async def _route_next(self, after: str) -> ConfigFlowResult:
-        chain = _SetsChain()
-        chain._working = self._working
-        nxt = chain._next_after(after)
-        if nxt == "power":
-            return await self.async_step_members_power()
-        if nxt == "attributes":
-            return await self.async_step_members_attributes()
-        if nxt == "state":
-            return await self.async_step_members_state()
         return await self._finish_members()
 
     async def _finish_members(self) -> ConfigFlowResult:
