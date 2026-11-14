@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-11-13
+
+### Changed
+
+- Configure is now a single page. The **Member sets and switches**
+  form shows the base members, every behaviour switch, and every
+  member set at once — each switch sits directly above the member
+  pickers it governs — instead of sending each switched-on
+  behaviour to its own follow-up page after Submit. Member sets
+  are always shown and editable, including for behaviours that are
+  switched off: such a set is saved but has no effect until the
+  behaviour is switched on. Saved settings and behaviour are
+  otherwise unchanged.
+
+### Removed
+
+- The long explanatory paragraphs at the top of the Configure form
+  and the creation wizard's switch page. Behaviour is documented
+  in the README instead.
+
 ## [1.1.0] - 2026-11-13
 
 ### Added
