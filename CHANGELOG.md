@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-11-14
+
+### Changed
+
+- The Configure form now groups each behaviour in its own section
+  — **Power**, **Attributes**, and **State** — with the behaviour's
+  switch as the first field inside its section, directly above the
+  member pickers it governs. On the flat form, the frontend's field
+  spacing left each switch visually closer to the previous
+  behaviour's pickers than to its own sets; inside a section the
+  switch and its sets stay together. Base members, Enforce power
+  scope, and Hide members are unchanged, and saved settings and
+  behaviour are identical.
+
+### Requirements
+
+- Minimum Home Assistant version raised from 2024.5.0 to
+  **2024.7.0**: the form sections used by the Configure form
+  (`homeassistant.data_entry_flow.section`) were added in 2024.7.0.
+
 ## [1.2.0] - 2026-11-13
 
 ### Changed
