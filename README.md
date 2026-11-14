@@ -164,6 +164,9 @@ logger:
 **Is this a replacement for the built-in Group helper?**
 No — it sits next to it. Use regular groups unless you need different lights for different behaviours.
 
+**How is this different from a scene?**
+A scene pushes fixed states onto a set of lights, once, and then it's gone — it has no state of its own and nothing to aim a control at afterwards. An asymmetric group is a permanent light entity: it's what your physical switches, automations, voice assistant, and dashboard buttons target, and it behaves differently when it's turned on versus turned off, when its brightness changes, and in what it reports as its state — every time, not just when something activates it.
+
 **What happens if I delete a preset?**
 Nothing changes on any group. Applying a preset copies its settings into the group, so groups keep working without it.
 
