@@ -8,7 +8,7 @@ Creation is a helper-style flow:
                   group containing itself, directly or transitively) is
                   rejected.
   2. sets       — the dimension toggles plus Enforce power scope
-                  (their starting/default state) plus hide_members /
+                  (their initial state) plus hide_members /
                   all_entities.
   3. power      — ONLY shown when Asymmetric power is on:
                   Power-ON and Power-OFF member selectors.
@@ -67,6 +67,7 @@ from .const import (
     DOMAIN,
     ENTRY_STORE_VERSION,
     MEMBER_KEYS,
+    TOGGLE_TO_PRESET_KEY,
     entry_store_key,
 )
 from .presets import async_get_preset_store
@@ -293,8 +294,7 @@ class _SetsChain:
     implement ``_finish_sets`` plus the four step methods' form
     rendering via the helpers below. The chain order is always
     power -> attributes -> state; a dimension whose toggle is off is
-    skipped entirely, leaving its subgroup at its current/default
-    value.
+    skipped entirely, leaving its subgroup at its current value.
     """
 
     _working: dict
@@ -457,6 +457,28 @@ class AsymmetricGroupOptionsFlow(OptionsFlow):
             self._working[CONF_BASE_MEMBERS] = list(
                 merged.get(CONF_BASE_MEMBERS) or []
             )
+            # Overlay the CURRENT runtime state: toggles and subgroups
+            # live in the runtime store and may have moved since
+            # creation (companion switches, presets, set_members).
+            # The form shows what the group is doing now, and saving
+            # re-seeds runtime from config — seeding from config alone
+            # would silently reset that state on save. No runtime
+            # (entry not loaded) falls back to the config values.
+            from . import get_runtime
+
+            try:
+                runtime = get_runtime(self.hass, entry.entry_id)
+            except KeyError:
+                runtime = None
+            if runtime is not None:
+                for config_key, toggle_key in (
+                    (v, k) for k, v in TOGGLE_TO_PRESET_KEY.items()
+                ):
+                    self._working[config_key] = bool(
+                        runtime.toggles[toggle_key]
+                    )
+                for key in MEMBER_KEYS:
+                    self._working[key] = list(runtime.subgroups[key])
             return self.async_show_form(
                 step_id="members",
                 data_schema=_options_members_schema(self._working),
@@ -519,11 +541,20 @@ class AsymmetricGroupOptionsFlow(OptionsFlow):
         # Options edits re-seed runtime state: clear the per-entry
         # runtime store so stored toggles/subgroups don't shadow
         # the new config after the reload triggered by saving.
+        # last_applied_preset is carried through the clear: it is a
+        # pure "last preset applied" label, and nothing in the
+        # re-seed needs it gone (live mutations leave it untouched
+        # for the same reason).
         store = Store(
             self.hass, ENTRY_STORE_VERSION, entry_store_key(entry.entry_id)
         )
+        existing = await store.async_load()
         # Store.async_remove is safe when no file exists yet.
         await store.async_remove()
+        if isinstance(existing, dict) and existing.get("last_applied_preset"):
+            await store.async_save(
+                {"last_applied_preset": existing["last_applied_preset"]}
+            )
         payload = {key: self._working.get(key) for key in _OPTION_KEYS}
         return self.async_create_entry(title="", data=payload)
 

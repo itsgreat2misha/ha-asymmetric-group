@@ -142,7 +142,6 @@ Light sets in a preset are matched against each group's own base lights when app
 - Switching a behaviour on or off can change the group's reported on/off state without any light changing — for example, turning *Asymmetric state* off when a hand-lit lamp is on suddenly counts that lamp. That's inherent to choosing which lights define the state.
 - **The group's light list always shows all base lights** (in its `entity_id` attribute). Extra attributes (`effective_power_on_members`, `effective_power_off_members`, `effective_attribute_members`, `effective_state_members`) show which sets are currently in effect.
 - **Templates: `expand()` does not expand an Asymmetric Group.** Home Assistant's `expand()` only recognises groups created with the core Group integration, so `expand(light.my_group)` returns the group itself instead of its lights. Read the members from the attribute instead — `expand(state_attr('light.my_group', 'entity_id'))` — and if the group sits inside a regular group, apply the same step once more to anything in the result that still has an `entity_id` attribute. Targeting the group in service calls is unaffected.
-- A group's current settings survive restarts. Editing the group under **Configure** resets it to the configured sets, discarding changes made by presets or `set_members` since — the Configure page is the starting point after every edit.
 
 ## Troubleshooting
 

@@ -12,7 +12,7 @@ CONF_STATE_MEMBERS = "state_members"
 CONF_HIDE_MEMBERS = "hide_members"
 CONF_ALL_ENTITIES = "all_entities"
 
-# Config keys holding the *default* (seed) value of each runtime toggle.
+# Config keys holding the initial value of each runtime toggle.
 CONF_ASYMMETRIC_POWER = "asymmetric_power"
 CONF_ASYMMETRIC_ATTRIBUTES = "asymmetric_attributes"
 CONF_ASYMMETRIC_STATE = "asymmetric_state"
