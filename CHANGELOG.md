@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.3] - 2026-11-15
+
+### Fixed
+
+- An **empty member set** is now kept empty everywhere. The
+  creation and **Configure** forms previously replaced an empty
+  set with the full base set, so a set could not be emptied at
+  all — clearing the Power-ON set, for example, still turned on
+  every base light. Empty now means empty at creation and in
+  Configure alike: with Asymmetric power on and an empty
+  Power-ON set, the group turns nothing on. Only the base
+  members are required. The creation power step's description
+  no longer claims the Power-OFF set defaults to the full base
+  set.
+
 ## [1.3.2] - 2026-11-15
 
 ### Fixed
