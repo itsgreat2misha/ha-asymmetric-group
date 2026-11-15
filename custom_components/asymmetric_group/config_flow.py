@@ -212,8 +212,7 @@ def _options_members_schema(defaults: dict) -> vol.Schema:
     frontend spaces the fields. Enforce power scope and Hide
     members close the form, again outside sections. Every picker
     is always shown (a set whose behaviour is off is stored but
-    inert) and pre-filled from the group's current sets, falling
-    back to the base set.
+    inert) and pre-filled from the group's current sets.
     """
     base = list(defaults.get(CONF_BASE_MEMBERS) or [])
 
@@ -225,7 +224,7 @@ def _options_members_schema(defaults: dict) -> vol.Schema:
 
     def _members(key: str) -> tuple[vol.Required, EntitySelector]:
         return (
-            vol.Required(key, default=list(defaults.get(key) or base)),
+            vol.Required(key, default=list(defaults.get(key) or [])),
             _light_selector(),
         )
 
@@ -261,27 +260,25 @@ def _options_members_schema(defaults: dict) -> vol.Schema:
 
 
 def _power_schema(defaults: dict) -> vol.Schema:
-    base = list(defaults.get(CONF_BASE_MEMBERS) or [])
     return vol.Schema(
         {
             vol.Required(
                 CONF_POWER_ON_MEMBERS,
-                default=list(defaults.get(CONF_POWER_ON_MEMBERS) or base),
+                default=list(defaults.get(CONF_POWER_ON_MEMBERS) or []),
             ): _light_selector(),
             vol.Required(
                 CONF_POWER_OFF_MEMBERS,
-                default=list(defaults.get(CONF_POWER_OFF_MEMBERS) or base),
+                default=list(defaults.get(CONF_POWER_OFF_MEMBERS) or []),
             ): _light_selector(),
         }
     )
 
 
 def _single_member_schema(key: str, defaults: dict) -> vol.Schema:
-    base = list(defaults.get(CONF_BASE_MEMBERS) or [])
     return vol.Schema(
         {
             vol.Required(
-                key, default=list(defaults.get(key) or base)
+                key, default=list(defaults.get(key) or [])
             ): _light_selector(),
         }
     )

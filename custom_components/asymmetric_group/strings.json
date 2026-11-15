@@ -16,7 +16,7 @@
           "power_off_members": "Power-OFF members",
           "power_on_members": "Power-ON members"
         },
-        "description": "Asymmetric power is on: choose which members turn on and which turn off. The Power-OFF set defaults to the full base set so a group off sweeps everything — keep it that way unless you have a reason not to.",
+        "description": "Asymmetric power is on: choose which members turn on and which turn off. A group off turns off the Power-OFF set — include the full base set if you want it to sweep everything.",
         "title": "Power member sets"
       },
       "sets": {

@@ -175,6 +175,55 @@ async def test_flow_power_step_shown_only_when_asymmetric_power_on(
     assert result["data"][CONF_POWER_OFF_MEMBERS] == MEMBERS
 
 
+async def test_flow_power_on_set_left_empty_stays_empty(
+    hass: HomeAssistant,
+) -> None:
+    """Creation with Asymmetric power on and the Power-ON set
+    cleared stores an empty set — empty is an intentional value,
+    not a missing one to backfill with the base set — and the
+    group then turns nothing on."""
+    for member in MEMBERS:
+        hass.states.async_set(member, "off", dict(_BRIGHTNESS_ATTRS))
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_NAME: "Empty On Group", CONF_BASE_MEMBERS: MEMBERS},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {**TOGGLES_OFF, CONF_ASYMMETRIC_POWER: True}
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "power"
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_POWER_ON_MEMBERS: [], CONF_POWER_OFF_MEMBERS: MEMBERS},
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_ASYMMETRIC_POWER] is True
+    assert result["data"][CONF_POWER_ON_MEMBERS] == []
+    assert result["data"][CONF_POWER_OFF_MEMBERS] == MEMBERS
+
+    await hass.async_block_till_done()
+    entries = hass.config_entries.async_entries(DOMAIN)
+    assert len(entries) == 1
+    assert entries[0].state == ConfigEntryState.LOADED
+
+    recorded = _track_light_calls(hass)
+    await hass.services.async_call(
+        "light",
+        "turn_on",
+        {"entity_id": "light.empty_on_group"},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+    # No member is ever targeted: the empty Power-ON set is
+    # genuinely empty at runtime too.
+    assert _member_calls(recorded, MEMBERS) == []
+
+
 async def test_flow_accepts_group_entities_as_members(
     hass: HomeAssistant,
 ) -> None:
@@ -391,6 +440,30 @@ async def test_options_save_preserves_runtime_state(
         hass.states.get("switch.test_group_enforce_power_scope").state
         == "on"
     )
+
+
+async def test_options_empty_set_shows_empty_and_survives_save(
+    hass: HomeAssistant,
+) -> None:
+    """Regression: a stored empty member set is shown empty in
+    Configure — not backfilled with the base set — and an
+    untouched save keeps it empty. Empty means the same at
+    creation and in Configure: an intentional value."""
+    entry = await _setup_entry(hass, _entry_data(**{CONF_ATTRIBUTE_MEMBERS: []}))
+
+    result = await _open_members_step(hass, entry)
+    payload = _prefilled_payload(result["data_schema"])
+    assert payload[SECTION_ATTRIBUTES][CONF_ATTRIBUTE_MEMBERS] == []
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], payload
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_ATTRIBUTE_MEMBERS] == []
+
+    await hass.async_block_till_done()
+    assert entry.options[CONF_ATTRIBUTE_MEMBERS] == []
+    assert hass.states.get("light.test_group") is not None
 
 
 async def test_options_preset_picker_shows_human_label_for_new_preset(
