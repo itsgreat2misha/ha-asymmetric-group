@@ -41,7 +41,7 @@ from .const import (
     entry_store_key,
 )
 
-# config default-toggle key -> runtime toggle key
+# config toggle key -> runtime toggle key
 _CONFIG_TOGGLE_MAP = {
     CONF_ASYMMETRIC_POWER: TOGGLE_POWER,
     CONF_ASYMMETRIC_ATTRIBUTES: TOGGLE_ATTRIBUTES,

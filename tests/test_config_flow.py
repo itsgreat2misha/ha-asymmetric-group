@@ -303,6 +303,96 @@ async def test_options_set_for_disabled_behaviour_is_stored(
     assert group.attributes["effective_attribute_members"] == MEMBERS
 
 
+def _prefilled_payload(schema) -> dict:
+    """The payload the UI would submit untouched: every field's
+    pre-filled default, sections nested as the form nests them."""
+    payload = {}
+    for marker, value in schema.schema.items():
+        if isinstance(value, section):
+            payload[marker.schema] = _prefilled_payload(value.schema)
+        else:
+            default = marker.default
+            payload[marker.schema] = default() if callable(default) else default
+    return payload
+
+
+async def test_options_save_preserves_runtime_state(
+    hass: HomeAssistant,
+) -> None:
+    """Regression: Configure shows CURRENT state, and saving it
+    unchanged must not reset runtime-only state. Enforce turned on
+    via its companion switch (config says off) and a preset applied
+    at runtime (label + narrowed state set) both survive an
+    unchanged Configure save."""
+    entry = await _setup_entry(hass, _entry_data())
+
+    # Enforce on at runtime only — the config value stays off.
+    await hass.services.async_call(
+        "switch",
+        "turn_on",
+        {"entity_id": "switch.test_group_enforce_power_scope"},
+        blocking=True,
+    )
+    # A preset that turns State on with a narrowed set, applied live.
+    await hass.services.async_call(
+        DOMAIN,
+        "set_members",
+        {
+            "entity_id": "light.test_group",
+            CONF_ASYMMETRIC_STATE: True,
+            CONF_STATE_MEMBERS: ["light.bedroom_2"],
+        },
+        blocking=True,
+    )
+    await hass.services.async_call(
+        DOMAIN,
+        "save_preset",
+        {"entity_id": "light.test_group", "preset": "Snap"},
+        blocking=True,
+    )
+    await hass.services.async_call(
+        DOMAIN,
+        "set_members",
+        {"entity_id": "light.test_group", CONF_ASYMMETRIC_STATE: False},
+        blocking=True,
+    )
+    await hass.services.async_call(
+        DOMAIN,
+        "apply_preset",
+        {"entity_id": "light.test_group", "preset": "Snap"},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+    group = hass.states.get("light.test_group")
+    assert group.attributes["enforce_power_scope"] is True
+    assert group.attributes["last_applied_preset"] == "Snap"
+
+    # The form must be pre-filled with the current state, not the
+    # config values (Enforce off / State off there).
+    result = await _open_members_step(hass, entry)
+    payload = _prefilled_payload(result["data_schema"])
+    assert payload[CONF_ENFORCE_POWER_SCOPE] is True
+    assert payload[SECTION_STATE][CONF_ASYMMETRIC_STATE] is True
+    assert payload[SECTION_STATE][CONF_STATE_MEMBERS] == ["light.bedroom_2"]
+
+    # Save unchanged; everything survives the save's runtime reseed.
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], payload
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    await hass.async_block_till_done()
+    group = hass.states.get("light.test_group")
+    assert group is not None
+    assert group.attributes["enforce_power_scope"] is True
+    assert group.attributes["asymmetric_state"] is True
+    assert group.attributes["effective_state_members"] == ["light.bedroom_2"]
+    assert group.attributes["last_applied_preset"] == "Snap"
+    assert (
+        hass.states.get("switch.test_group_enforce_power_scope").state
+        == "on"
+    )
+
+
 async def test_options_preset_picker_shows_human_label_for_new_preset(
     hass: HomeAssistant,
 ) -> None:

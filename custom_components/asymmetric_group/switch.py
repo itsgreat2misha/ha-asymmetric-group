@@ -3,7 +3,8 @@
 Each group gets four switches — one per dimension plus Enforce power
 scope — that flip the runtime toggles. They live on the same device as
 the group light, so the mode control is stored *on the group itself*
-(config default + these switches / preset services at runtime), not
+(initial values from the config entry, then these switches / preset
+services at runtime), not
 in a separate user-managed helper.
 """
 
