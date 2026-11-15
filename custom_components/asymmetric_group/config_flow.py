@@ -294,8 +294,7 @@ class _SetsChain:
     implement ``_finish_sets`` plus the four step methods' form
     rendering via the helpers below. The chain order is always
     power -> attributes -> state; a dimension whose toggle is off is
-    skipped entirely, leaving its subgroup at its current/default
-    value.
+    skipped entirely, leaving its subgroup at its current value.
     """
 
     _working: dict
